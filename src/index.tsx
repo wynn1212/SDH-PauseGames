@@ -1,5 +1,6 @@
 import {
   definePlugin,
+  Button,
   PanelSection,
   PanelSectionRow,
   ServerAPI,
@@ -17,11 +18,16 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [hasStickyPauseState, setHasStickyPauseState] =
     useState<boolean>(false);
+  const [noAutoPauseSet, setNoAutoPauseSet] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     backend.getAppMetaData(Number(app.appid)).then((appMD) => {
       setIsPaused(appMD.is_paused);
       setHasStickyPauseState(appMD.sticky_state);
+    });
+    backend.loadSettings().then((s) => {
+      console.log(s);
+      setNoAutoPauseSet(s.noAutoPauseSet);
     });
     const unregisterPauseStateChange = backend.registerPauseStateChange(
       Number(app.appid),
@@ -40,19 +46,40 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
 
   return (
     <ToggleField
-      checked={isPaused}
+      checked={noAutoPauseSet.has(Number(app.appid))}
       key={app.appid}
       label={
         <div>
           <Marquee>{app.display_name}</Marquee>
+          <Button
+            style= {{ height: "21px" }}
+            onOKButton={async () => {
+              const appMD = await backend.getAppMetaData(Number(app.appid));
+              if (
+                !(await (isPaused
+                  ? backend.resume(appMD.instanceid)
+                  : backend.pause(appMD.instanceid)))
+              ) {
+                return;
+              }
+              appMD.is_paused = !isPaused;
+              setIsPaused(!isPaused);
+              if ((!isPaused) &&((await backend.loadSettings()).autoPause)) {
+                backend.setStickyPauseState(Number(app.appid));
+                setHasStickyPauseState(true);
+              } else if (hasStickyPauseState) {
+                backend.resetStickyPauseState(Number(app.appid));
+                setHasStickyPauseState(false);
+              }
+            }}>
           {isPaused ? (
             <FaPause color={hasStickyPauseState ? "deepskyblue" : undefined} />
           ) : (
             <FaPlay color={hasStickyPauseState ? "deepskyblue" : undefined} />
           )}
+          </Button>
         </div>
       }
-      tooltip={isPaused ? "Paused" : "Running"}
       icon={
         (app.icon_data && app.icon_data_format) || app.icon_hash ? (
           <img
@@ -69,19 +96,10 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
         ) : null
       }
       onChange={async (state) => {
-        const appMD = await backend.getAppMetaData(Number(app.appid));
-        if (
-          !(await (state
-            ? backend.pause(appMD.instanceid)
-            : backend.resume(appMD.instanceid)))
-        ) {
-          return;
-        }
-        appMD.is_paused = state;
-        setIsPaused(state);
-        if ((await backend.loadSettings()).autoPause) {
-          backend.setStickyPauseState(Number(app.appid));
-          setHasStickyPauseState(true);
+        if (state) {
+          await backend.add_no_auto_pause_set(Number(app.appid));
+        } else {
+          await backend.remove_no_auto_pause_set(Number(app.appid));
         }
       }}
     />
@@ -202,6 +220,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 
 export default definePlugin((serverApi: ServerAPI) => {
   backend.setServerAPI(serverApi);
+  backend.migrateSettings();
 
   const unregisterFocusChangeHandler = backend.setupFocusChangeHandler();
   const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();

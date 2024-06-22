@@ -8,8 +8,6 @@ import {
 } from "decky-frontend-lib";
 import { debounce, throttle } from "lodash";
 
-const LOCAL_STORAGE_KEY = "pause-games-settings";
-
 // only the needed subset of the SteamClient
 declare var SteamClient: {
   GameSessions: {
@@ -94,11 +92,13 @@ export interface Settings {
   pauseBeforeSuspend: boolean;
   autoPause: boolean;
   overlayPause: boolean;
+  noAutoPauseSet: Set<number>;
 }
 export const NullSettings: Settings = {
   pauseBeforeSuspend: false,
   autoPause: false,
   overlayPause: false,
+  noAutoPauseSet: new Set(),
 } as const;
 
 var serverAPI: ServerAPI | undefined = undefined;
@@ -149,18 +149,50 @@ export async function appid_from_pid(pid: number): Promise<number> {
   return backend_call<{ pid: number }, number>("appid_from_pid", { pid });
 }
 
+export async function add_no_auto_pause_set(appid: number): Promise<void> {
+  return backend_call<{ appid: number }, void>("add_no_auto_pause_set", { appid });
+}
+
+export async function remove_no_auto_pause_set(appid: number): Promise<void> {
+  return backend_call<{ appid: number }, void>("remove_no_auto_pause_set", { appid });
+}
+
+export async function in_no_auto_pause_set(appid: number): Promise<boolean> {
+  return backend_call<{ appid: number }, boolean>("in_no_auto_pause_set", { appid });
+}
+
 export async function loadSettings(): Promise<Settings> {
-  const strSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (strSettings?.length) {
-    try {
-      return JSON.parse(strSettings) as Settings;
-    } catch (e) {}
-  }
+  try {
+    let data = await backend_call<{}, Settings>("load_settings", {});
+    let settings = { ...NullSettings, ...data };
+    settings.noAutoPauseSet = new Set(data.noAutoPauseSet);
+    return settings;
+  } catch (e) {}
+
+  saveSettings(NullSettings);
   return { ...NullSettings };
 }
 
+async function saveSetting(key: keyof Settings, value: Settings[keyof Settings]) {
+  backend_call<{ key: keyof Settings; value: Settings[keyof Settings] }, void>("save_setting", {key, value});
+}
+
 export async function saveSettings(s: Settings): Promise<void> {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(s));
+  for (const k in s) {
+    saveSetting(k as keyof Settings, s[k]);
+  }
+}
+
+export async function migrateSettings() {
+  const LOCAL_STORAGE_KEY = "pause-games-settings";
+  const strSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (strSettings?.length) {
+    try {
+      let settings = JSON.parse(strSettings) as Settings;
+      saveSettings(settings);
+    } catch (e) {}
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+  }
 }
 
 let appMetaDataMap: {
@@ -394,6 +426,10 @@ export function setupFocusChangeHandler(): () => void {
         }
         await Promise.all(
           (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
+            if (!(await in_no_auto_pause_set(Number(a.appid))))
+            {
+              return a;
+            }
             const appMD = await getAppMetaData(Number(a.appid));
             // if the sticky pause state is on for this app don't do anything to it
             if (appMD.sticky_state) {
