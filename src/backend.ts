@@ -173,7 +173,7 @@ export async function loadSettings(): Promise<Settings> {
   return { ...NullSettings };
 }
 
-async function saveSetting(key: keyof Settings, value: Settings[keyof Settings]) {
+export async function saveSetting(key: keyof Settings, value: Settings[keyof Settings]) {
   backend_call<{ key: keyof Settings; value: Settings[keyof Settings] }, void>("save_setting", {key, value});
 }
 

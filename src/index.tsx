@@ -26,7 +26,6 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       setHasStickyPauseState(appMD.sticky_state);
     });
     backend.loadSettings().then((s) => {
-      console.log(s);
       setNoAutoPauseSet(s.noAutoPauseSet);
     });
     const unregisterPauseStateChange = backend.registerPauseStateChange(
@@ -97,8 +96,10 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       }
       onChange={async (state) => {
         if (state) {
+          noAutoPauseSet.add(Number(app.appid));
           await backend.add_no_auto_pause_set(Number(app.appid));
         } else {
+          noAutoPauseSet.delete(Number(app.appid));
           await backend.remove_no_auto_pause_set(Number(app.appid));
         }
       }}
@@ -139,10 +140,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           tooltip="Pause all apps before suspend and resume those not explicitely paused."
           icon={<FaMoon />}
           onChange={async (state) => {
-            const settings = await backend.loadSettings();
-            settings.pauseBeforeSuspend = state;
-            await backend.saveSettings(settings);
             setPauseBeforeSuspend(state);
+            await backend.saveSetting("pauseBeforeSuspend", state);
           }}
         />
       </PanelSectionRow>
@@ -154,11 +153,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           tooltip="Pauses apps not in focus when switching between them."
           icon={<FaStream />}
           onChange={async (state) => {
-            const settings = await backend.loadSettings();
-            settings.autoPause = state;
-            await backend.saveSettings(settings);
             setAutoPause(state);
             backend.resetStickyPauseStates();
+            await backend.saveSetting("autoPause", state);
           }}
         />
       </PanelSectionRow>
@@ -169,10 +166,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             label=" ↳ Also on overlay"
             tooltip="Pause apps when interacting with Steam Overlay."
             onChange={async (state) => {
-              const settings = await backend.loadSettings();
-              settings.overlayPause = state;
-              await backend.saveSettings(settings);
               setOverlayPause(state);
+              await backend.saveSetting("overlayPause", state);
             }}
             disabled={!autoPause}
           />
