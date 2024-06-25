@@ -214,8 +214,8 @@ export default definePlugin((serverApi: ServerAPI) => {
   backend.setServerAPI(serverApi);
   Settings.init();
   let patch = beforePatch(SteamClient.Apps, "TerminateApp", (inputs: any[]) => {
-      backend?.resumeApp?.(inputs[0] as number);
-    });
+      backend?.resumeApp?.(inputs[0]);
+  });
 
   const unregisterFocusChangeHandler = backend.setupFocusChangeHandler();
   const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();
