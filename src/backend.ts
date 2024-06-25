@@ -161,6 +161,12 @@ export async function getAppMetaData(appid: number) {
 }
 
 export async function resumeApp(appid: number) {
+  if (appid > 0xffffffff) {
+    // non-steam game
+    // https://gaming.stackexchange.com/questions/386882/how-do-i-find-the-appid-for-a-non-steam-game-on-steam
+    appid = appid >> 32;
+  }
+  
   const appMD = await getAppMetaData(appid);
   appMD.is_paused = await is_paused(appMD.instanceid);
   if (appMD.is_paused && !appMD.last_pause_state) {

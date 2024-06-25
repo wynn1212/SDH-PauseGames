@@ -1,13 +1,14 @@
 import {
+  beforePatch,
   definePlugin,
+  staticClasses,
   Button,
+  Marquee,
   PanelSection,
   PanelSectionRow,
-  ServerAPI,
-  staticClasses,
-  ToggleField,
   Router,
-  Marquee,
+  ServerAPI,
+  ToggleField,
 } from "decky-frontend-lib";
 import { useEffect, useState, VFC } from "react";
 import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
@@ -209,36 +210,12 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   );
 };
 
-function overrideTerminateApp() {
-  if (!(SteamClient.Apps as any)?.OriginalTerminateApp) {
-    console.log("Overriding SteamClient.Apps.TerminateApp(), original copy is saved to SteamClient.Apps.OriginalTerminateApp()");
-    (SteamClient.Apps as any).OriginalTerminateApp = SteamClient.Apps.TerminateApp.bind(SteamClient.Apps);
-  }
-
-  SteamClient.Apps.TerminateApp = (appid: number, unknownInput: any) => {
-    if (appid > 0xffffffff) {
-      // non-steam game
-      // https://gaming.stackexchange.com/questions/386882/how-do-i-find-the-appid-for-a-non-steam-game-on-steam
-      backend?.resumeApp?.(appid >> 32);
-    } else {
-      backend?.resumeApp?.(appid);
-    }
-    return (SteamClient.Apps as any).OriginalTerminateApp?.(appid, unknownInput);
-  };
-}
-
-function restoreTerminateApp() {
-  if ((SteamClient.Apps as any)?.OriginalTerminateApp) {
-    console.log("Restoring SteamClient.Apps.TerminateApp()");
-    SteamClient.Apps.TerminateApp = (SteamClient.Apps as any).OriginalTerminateApp;
-    delete (SteamClient.Apps as any).OriginalTerminateApp;
-  }
-}
-
 export default definePlugin((serverApi: ServerAPI) => {
   backend.setServerAPI(serverApi);
   Settings.init();
-  overrideTerminateApp();
+  let patch = beforePatch(SteamClient.Apps, "TerminateApp", (inputs: any[]) => {
+      backend?.resumeApp?.(inputs[0] as number);
+    });
 
   const unregisterFocusChangeHandler = backend.setupFocusChangeHandler();
   const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();
@@ -248,7 +225,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     content: <Content serverAPI={serverApi} />,
     icon: <FaPause />,
     onDismount() {
-      restoreTerminateApp();
+      patch.unpatch();
       unregisterFocusChangeHandler();
       unregisterSuspendResumeHandler();
     },
