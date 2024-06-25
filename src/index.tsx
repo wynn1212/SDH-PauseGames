@@ -13,21 +13,22 @@ import { useEffect, useState, VFC } from "react";
 import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
 
 import * as backend from "./backend";
+import { Settings } from "./settings";
 
 const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [hasStickyPauseState, setHasStickyPauseState] =
     useState<boolean>(false);
-  const [noAutoPauseSet, setNoAutoPauseSet] = useState<Set<number>>(new Set());
+  const [noAutoPauseSet] = useState<Set<number>>(Settings.data.noAutoPauseSet);
 
   useEffect(() => {
     backend.getAppMetaData(Number(app.appid)).then((appMD) => {
       setIsPaused(appMD.is_paused);
       setHasStickyPauseState(appMD.sticky_state);
     });
-    backend.loadSettings().then((s) => {
-      setNoAutoPauseSet(s.noAutoPauseSet);
-    });
+    Settings.load().then(() => {
+      Settings.data.noAutoPauseSet.forEach((id) => noAutoPauseSet.add(id));
+    })
     const unregisterPauseStateChange = backend.registerPauseStateChange(
       Number(app.appid),
       setIsPaused
@@ -63,7 +64,7 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
               }
               appMD.is_paused = !isPaused;
               setIsPaused(!isPaused);
-              if ((!isPaused) &&((await backend.loadSettings()).autoPause)) {
+              if ((!isPaused) && Settings.data.autoPause) {
                 backend.setStickyPauseState(Number(app.appid));
                 setHasStickyPauseState(true);
               } else if (hasStickyPauseState) {
@@ -97,10 +98,10 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       onChange={async (state) => {
         if (state) {
           noAutoPauseSet.add(Number(app.appid));
-          await backend.add_no_auto_pause_set(Number(app.appid));
+          await Settings.addNoAutoPauseSet(Number(app.appid));
         } else {
           noAutoPauseSet.delete(Number(app.appid));
-          await backend.remove_no_auto_pause_set(Number(app.appid));
+          await Settings.removeNoAutoPauseSet(Number(app.appid));
         }
       }}
     />
@@ -111,16 +112,11 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const [runningApps, setRunningApps] = useState<backend.AppOverviewExt[]>(
     Router.RunningApps as backend.AppOverviewExt[]
   );
-  const [pauseBeforeSuspend, setPauseBeforeSuspend] = useState<boolean>(false);
-  const [autoPause, setAutoPause] = useState<boolean>(false);
-  const [overlayPause, setOverlayPause] = useState<boolean>(false);
+  const [pauseBeforeSuspend, setPauseBeforeSuspend] = useState<boolean>(Settings.data.pauseBeforeSuspend);
+  const [autoPause, setAutoPause] = useState<boolean>(Settings.data.autoPause);
+  const [overlayPause, setOverlayPause] = useState<boolean>(Settings.data.overlayPause);
 
   useEffect(() => {
-    backend.loadSettings().then((s) => {
-      setPauseBeforeSuspend(s.pauseBeforeSuspend);
-      setAutoPause(s.autoPause);
-      setOverlayPause(s.overlayPause);
-    });
     const unregisterRunningAppsChange = backend.registerForRunningAppsChange(
       (runningApps: backend.AppOverviewExt[]) => {
         setRunningApps(runningApps);
@@ -141,7 +137,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           icon={<FaMoon />}
           onChange={async (state) => {
             setPauseBeforeSuspend(state);
-            await backend.saveSetting("pauseBeforeSuspend", state);
+            await Settings.save("pauseBeforeSuspend", state);
           }}
         />
       </PanelSectionRow>
@@ -155,7 +151,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           onChange={async (state) => {
             setAutoPause(state);
             backend.resetStickyPauseStates();
-            await backend.saveSetting("autoPause", state);
+            await Settings.save("autoPause", state);
           }}
         />
       </PanelSectionRow>
@@ -167,7 +163,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             tooltip="Pause apps when interacting with Steam Overlay."
             onChange={async (state) => {
               setOverlayPause(state);
-              await backend.saveSetting("overlayPause", state);
+              await Settings.save("overlayPause", state);
             }}
             disabled={!autoPause}
           />
@@ -213,9 +209,36 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   );
 };
 
+function overrideTerminateApp() {
+  if (!(SteamClient.Apps as any)?.OriginalTerminateApp) {
+    console.log("Overriding SteamClient.Apps.TerminateApp(), original copy is saved to SteamClient.Apps.OriginalTerminateApp()");
+    (SteamClient.Apps as any).OriginalTerminateApp = SteamClient.Apps.TerminateApp.bind(SteamClient.Apps);
+  }
+
+  SteamClient.Apps.TerminateApp = (appid: number, unknownInput: any) => {
+    if (appid > 0xffffffff) {
+      // non-steam game
+      // https://gaming.stackexchange.com/questions/386882/how-do-i-find-the-appid-for-a-non-steam-game-on-steam
+      backend?.resumeApp?.(appid >> 32);
+    } else {
+      backend?.resumeApp?.(appid);
+    }
+    return (SteamClient.Apps as any).OriginalTerminateApp?.(appid, unknownInput);
+  };
+}
+
+function restoreTerminateApp() {
+  if ((SteamClient.Apps as any)?.OriginalTerminateApp) {
+    console.log("Restoring SteamClient.Apps.TerminateApp()");
+    SteamClient.Apps.TerminateApp = (SteamClient.Apps as any).OriginalTerminateApp;
+    delete (SteamClient.Apps as any).OriginalTerminateApp;
+  }
+}
+
 export default definePlugin((serverApi: ServerAPI) => {
   backend.setServerAPI(serverApi);
-  backend.migrateSettings();
+  Settings.init();
+  overrideTerminateApp();
 
   const unregisterFocusChangeHandler = backend.setupFocusChangeHandler();
   const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();
@@ -225,6 +248,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     content: <Content serverAPI={serverApi} />,
     icon: <FaPause />,
     onDismount() {
+      restoreTerminateApp();
       unregisterFocusChangeHandler();
       unregisterSuspendResumeHandler();
     },
