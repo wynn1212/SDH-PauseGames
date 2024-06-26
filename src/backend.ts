@@ -382,7 +382,7 @@ export function setupFocusChangeHandler(): () => void {
         }
         await Promise.all(
           (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
-            if (!Settings.data.noAutoPauseSet.has(Number(a.appid)))
+            if (Settings.data.noAutoPauseSet.has(Number(a.appid)))
             {
               return a;
             }

@@ -47,7 +47,7 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
 
   return (
     <ToggleField
-      checked={noAutoPauseSet.has(Number(app.appid))}
+      checked={!noAutoPauseSet.has(Number(app.appid))}
       key={app.appid}
       label={
         <div>
@@ -98,11 +98,11 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       }
       onChange={async (state) => {
         if (state) {
-          noAutoPauseSet.add(Number(app.appid));
-          await Settings.addNoAutoPauseSet(Number(app.appid));
-        } else {
           noAutoPauseSet.delete(Number(app.appid));
           await Settings.removeNoAutoPauseSet(Number(app.appid));
+        } else {
+          noAutoPauseSet.add(Number(app.appid));
+          await Settings.addNoAutoPauseSet(Number(app.appid));
         }
       }}
     />
