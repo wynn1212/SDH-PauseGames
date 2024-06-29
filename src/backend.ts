@@ -7,8 +7,7 @@ import {
   LifetimeNotification,
 } from "decky-frontend-lib";
 import { debounce, throttle } from "lodash";
-
-const LOCAL_STORAGE_KEY = "pause-games-settings";
+import { Settings } from "./settings";
 
 // only the needed subset of the SteamClient
 declare var SteamClient: {
@@ -90,24 +89,13 @@ interface FocusChangeEvent {
   };
 }
 
-export interface Settings {
-  pauseBeforeSuspend: boolean;
-  autoPause: boolean;
-  overlayPause: boolean;
-}
-export const NullSettings: Settings = {
-  pauseBeforeSuspend: false,
-  autoPause: false,
-  overlayPause: false,
-} as const;
-
 var serverAPI: ServerAPI | undefined = undefined;
 
 export function setServerAPI(s: ServerAPI) {
   serverAPI = s;
 }
 
-async function backend_call<I, O>(name: string, params: I): Promise<O> {
+export async function backend_call<I, O>(name: string, params: I): Promise<O> {
   try {
     const res = await serverAPI!.callPluginMethod<I, O>(name, params);
     if (res.success) return res.result;
@@ -149,20 +137,6 @@ export async function appid_from_pid(pid: number): Promise<number> {
   return backend_call<{ pid: number }, number>("appid_from_pid", { pid });
 }
 
-export async function loadSettings(): Promise<Settings> {
-  const strSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (strSettings?.length) {
-    try {
-      return JSON.parse(strSettings) as Settings;
-    } catch (e) {}
-  }
-  return { ...NullSettings };
-}
-
-export async function saveSettings(s: Settings): Promise<void> {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(s));
-}
-
 let appMetaDataMap: {
   [appid: number]: AppOverviewExtPG;
 } = {};
@@ -184,6 +158,24 @@ export async function getAppMetaData(appid: number) {
     sticky_state: false,
     sticky_state_callbacks: [],
   });
+}
+
+export async function resumeApp(appid: number | string) {
+  if (typeof appid === "string") {
+    let id = BigInt(appid);
+    if (id > BigInt(0xffffffff)) {
+      // non-steam game
+      // https://gaming.stackexchange.com/questions/386882/how-do-i-find-the-appid-for-a-non-steam-game-on-steam
+      id = id / (BigInt(2) ** BigInt(32));
+    }
+    appid = Number(id);
+  }
+
+  const appMD = await getAppMetaData(appid);
+  appMD.is_paused = await is_paused(appMD.instanceid);
+  if (appMD.is_paused && !appMD.last_pause_state) {
+    appMD.is_paused = !(await resume(appMD.instanceid));
+  }
 }
 
 export async function setStickyPauseState(appid: number) {
@@ -288,7 +280,7 @@ export function setupSuspendResumeHandler(): () => void {
   const { unregister: unregisterOnSuspendRequest } =
     SteamClient.System.RegisterForOnSuspendRequest(async () => {
       systemWillSuspend = true;
-      if (!(await loadSettings()).pauseBeforeSuspend) return;
+      if (!Settings.data.pauseBeforeSuspend) return;
       await Promise.all(
         (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
           const appMD = await getAppMetaData(Number(a.appid));
@@ -305,14 +297,10 @@ export function setupSuspendResumeHandler(): () => void {
   const { unregister: unregisterOnResumeFromSuspend } =
     SteamClient.System.RegisterForOnResumeFromSuspend(async () => {
       systemWillSuspend = false;
-      if (!(await loadSettings()).pauseBeforeSuspend) return;
+      if (!Settings.data.pauseBeforeSuspend) return;
       await Promise.all(
         (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
-          const appMD = await getAppMetaData(Number(a.appid));
-          appMD.is_paused = await is_paused(appMD.instanceid);
-          if (appMD.is_paused && !appMD.last_pause_state) {
-            appMD.is_paused = !(await resume(appMD.instanceid));
-          }
+          await resumeApp(Number(a.appid));
           return a;
         })
       );
@@ -370,13 +358,13 @@ export function setupFocusChangeHandler(): () => void {
           return;
         lastAppid = fce.focusedApp.appid;
 
-        if (!(await loadSettings()).autoPause) return;
+        if (!Settings.data.autoPause) return;
         // AppID 769 is the Steam Overlay or a non-steam app
         // Key event must be if the user pressed the 'STEAM' button. Don't pause for other buttons
         const overlayPause =
           fce.focusedApp.appid === 769 &&
           validKeyEvent?.eKey === 0 &&
-          (await loadSettings()).overlayPause;
+          Settings.data.overlayPause;
         if (!fce.focusedApp.appid || fce.focusedApp.appid === 769) {
           const appid = await appid_from_pid(fce.focusedApp.pid);
           if (appid) {
@@ -394,6 +382,10 @@ export function setupFocusChangeHandler(): () => void {
         }
         await Promise.all(
           (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
+            if (Settings.data.noAutoPauseSet.has(Number(a.appid)))
+            {
+              return a;
+            }
             const appMD = await getAppMetaData(Number(a.appid));
             // if the sticky pause state is on for this app don't do anything to it
             if (appMD.sticky_state) {
