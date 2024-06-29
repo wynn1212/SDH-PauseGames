@@ -74,9 +74,9 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
               }
             }}>
           {isPaused ? (
-            <FaPause color={hasStickyPauseState ? "deepskyblue" : undefined} />
-          ) : (
             <FaPlay color={hasStickyPauseState ? "deepskyblue" : undefined} />
+          ) : (
+            <FaPause color={hasStickyPauseState ? "deepskyblue" : undefined} />
           )}
           </Button>
         </div>
