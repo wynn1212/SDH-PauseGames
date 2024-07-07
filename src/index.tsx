@@ -1,28 +1,35 @@
 import {
+  beforePatch,
   definePlugin,
+  staticClasses,
+  Button,
+  Marquee,
   PanelSection,
   PanelSectionRow,
-  ServerAPI,
-  staticClasses,
-  ToggleField,
   Router,
-  Marquee,
+  ServerAPI,
+  ToggleField,
 } from "decky-frontend-lib";
 import { useEffect, useState, VFC } from "react";
 import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
 
 import * as backend from "./backend";
+import { Settings } from "./settings";
 
 const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [hasStickyPauseState, setHasStickyPauseState] =
     useState<boolean>(false);
+  const [noAutoPauseSet] = useState<Set<number>>(Settings.data.noAutoPauseSet);
 
   useEffect(() => {
     backend.getAppMetaData(Number(app.appid)).then((appMD) => {
       setIsPaused(appMD.is_paused);
       setHasStickyPauseState(appMD.sticky_state);
     });
+    Settings.load().then(() => {
+      Settings.data.noAutoPauseSet.forEach((id) => noAutoPauseSet.add(id));
+    })
     const unregisterPauseStateChange = backend.registerPauseStateChange(
       Number(app.appid),
       setIsPaused
@@ -40,19 +47,40 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
 
   return (
     <ToggleField
-      checked={isPaused}
+      checked={!noAutoPauseSet.has(Number(app.appid))}
       key={app.appid}
       label={
         <div>
           <Marquee>{app.display_name}</Marquee>
+          <Button
+            style= {{ height: "21px" }}
+            onOKButton={async () => {
+              const appMD = await backend.getAppMetaData(Number(app.appid));
+              if (
+                !(await (isPaused
+                  ? backend.resume(appMD.instanceid)
+                  : backend.pause(appMD.instanceid)))
+              ) {
+                return;
+              }
+              appMD.is_paused = !isPaused;
+              setIsPaused(!isPaused);
+              if ((!isPaused) && Settings.data.autoPause) {
+                backend.setStickyPauseState(Number(app.appid));
+                setHasStickyPauseState(true);
+              } else if (hasStickyPauseState) {
+                backend.resetStickyPauseState(Number(app.appid));
+                setHasStickyPauseState(false);
+              }
+            }}>
           {isPaused ? (
-            <FaPause color={hasStickyPauseState ? "deepskyblue" : undefined} />
-          ) : (
             <FaPlay color={hasStickyPauseState ? "deepskyblue" : undefined} />
+          ) : (
+            <FaPause color={hasStickyPauseState ? "deepskyblue" : undefined} />
           )}
+          </Button>
         </div>
       }
-      tooltip={isPaused ? "Paused" : "Running"}
       icon={
         (app.icon_data && app.icon_data_format) || app.icon_hash ? (
           <img
@@ -69,19 +97,12 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
         ) : null
       }
       onChange={async (state) => {
-        const appMD = await backend.getAppMetaData(Number(app.appid));
-        if (
-          !(await (state
-            ? backend.pause(appMD.instanceid)
-            : backend.resume(appMD.instanceid)))
-        ) {
-          return;
-        }
-        appMD.is_paused = state;
-        setIsPaused(state);
-        if ((await backend.loadSettings()).autoPause) {
-          backend.setStickyPauseState(Number(app.appid));
-          setHasStickyPauseState(true);
+        if (state) {
+          noAutoPauseSet.delete(Number(app.appid));
+          await Settings.removeNoAutoPauseSet(Number(app.appid));
+        } else {
+          noAutoPauseSet.add(Number(app.appid));
+          await Settings.addNoAutoPauseSet(Number(app.appid));
         }
       }}
     />
@@ -92,16 +113,11 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   const [runningApps, setRunningApps] = useState<backend.AppOverviewExt[]>(
     Router.RunningApps as backend.AppOverviewExt[]
   );
-  const [pauseBeforeSuspend, setPauseBeforeSuspend] = useState<boolean>(false);
-  const [autoPause, setAutoPause] = useState<boolean>(false);
-  const [overlayPause, setOverlayPause] = useState<boolean>(false);
+  const [pauseBeforeSuspend, setPauseBeforeSuspend] = useState<boolean>(Settings.data.pauseBeforeSuspend);
+  const [autoPause, setAutoPause] = useState<boolean>(Settings.data.autoPause);
+  const [overlayPause, setOverlayPause] = useState<boolean>(Settings.data.overlayPause);
 
   useEffect(() => {
-    backend.loadSettings().then((s) => {
-      setPauseBeforeSuspend(s.pauseBeforeSuspend);
-      setAutoPause(s.autoPause);
-      setOverlayPause(s.overlayPause);
-    });
     const unregisterRunningAppsChange = backend.registerForRunningAppsChange(
       (runningApps: backend.AppOverviewExt[]) => {
         setRunningApps(runningApps);
@@ -121,10 +137,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           tooltip="Pause all apps before suspend and resume those not explicitely paused."
           icon={<FaMoon />}
           onChange={async (state) => {
-            const settings = await backend.loadSettings();
-            settings.pauseBeforeSuspend = state;
-            await backend.saveSettings(settings);
             setPauseBeforeSuspend(state);
+            await Settings.save("pauseBeforeSuspend", state);
           }}
         />
       </PanelSectionRow>
@@ -136,11 +150,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           tooltip="Pauses apps not in focus when switching between them."
           icon={<FaStream />}
           onChange={async (state) => {
-            const settings = await backend.loadSettings();
-            settings.autoPause = state;
-            await backend.saveSettings(settings);
             setAutoPause(state);
             backend.resetStickyPauseStates();
+            await Settings.save("autoPause", state);
           }}
         />
       </PanelSectionRow>
@@ -151,10 +163,8 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
             label=" ↳ Also on overlay"
             tooltip="Pause apps when interacting with Steam Overlay."
             onChange={async (state) => {
-              const settings = await backend.loadSettings();
-              settings.overlayPause = state;
-              await backend.saveSettings(settings);
               setOverlayPause(state);
+              await Settings.save("overlayPause", state);
             }}
             disabled={!autoPause}
           />
@@ -202,6 +212,10 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 
 export default definePlugin((serverApi: ServerAPI) => {
   backend.setServerAPI(serverApi);
+  Settings.init();
+  let patch = beforePatch(SteamClient.Apps, "TerminateApp", (inputs: any[]) => {
+      backend?.resumeApp?.(inputs[0]);
+  });
 
   const unregisterFocusChangeHandler = backend.setupFocusChangeHandler();
   const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();
@@ -211,6 +225,7 @@ export default definePlugin((serverApi: ServerAPI) => {
     content: <Content serverAPI={serverApi} />,
     icon: <FaPause />,
     onDismount() {
+      patch.unpatch();
       unregisterFocusChangeHandler();
       unregisterSuspendResumeHandler();
     },
