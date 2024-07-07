@@ -70,17 +70,16 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   };
 
   let getAppIcon = (app: backend.AppOverviewExt) => {
+    let iconUrl;
     if (app.icon_data && app.icon_data_format) {
-      return (
-        `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),url(${"data:image/" +
-        app.icon_data_format +
-        ";base64," +
-        app.icon_data})`
-      );
+      iconUrl = `data:image/${app.icon_data_format};base64,${app.icon_data}`;
     } else if (app.icon_hash) {
-      return "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),/assets/" + app.appid + "_icon.jpg?v=" + app.icon_hash;
+      iconUrl = `/assets/${app.appid}_icon.jpg?v=${app.icon_hash}`;
     }
 
+    if (iconUrl) {
+      return `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${iconUrl})`;
+    }
     return "none";
   }
 
