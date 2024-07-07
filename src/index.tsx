@@ -46,6 +46,44 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
     };
   }, []);
 
+  let onClickPauseButton = async () => {
+    {
+      console.log("Pause", app.appid);
+      const appMD = await backend.getAppMetaData(Number(app.appid));
+      if (
+        !(await (isPaused
+          ? interop.resume(appMD.instanceid)
+          : interop.pause(appMD.instanceid)))
+      ) {
+        return;
+      }
+      appMD.is_paused = !isPaused;
+      setIsPaused(!isPaused);
+      if ((!isPaused) && Settings.data.autoPause) {
+        backend.setStickyPauseState(Number(app.appid));
+        setHasStickyPauseState(true);
+      } else if (hasStickyPauseState) {
+        backend.resetStickyPauseState(Number(app.appid));
+        setHasStickyPauseState(false);
+      }
+    }
+  };
+
+  let getAppIcon = (app: backend.AppOverviewExt) => {
+    if (app.icon_data && app.icon_data_format) {
+      return (
+        `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),url(${"data:image/" +
+        app.icon_data_format +
+        ";base64," +
+        app.icon_data})`
+      );
+    } else if (app.icon_hash) {
+      return "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),/assets/" + app.appid + "_icon.jpg?v=" + app.icon_hash;
+    }
+
+    return "none";
+  }
+
   return (
     <ToggleField
       checked={!noAutoPauseSet.has(Number(app.appid))}
@@ -56,59 +94,30 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
         </div>
       }
       icon={
-        (app.icon_data && app.icon_data_format) || app.icon_hash ? (
-          <Button
-            style={{ border: "none" }}
-            onOKButton={async () => {
-              console.log("Pause", app.appid);
-              const appMD = await backend.getAppMetaData(Number(app.appid));
-              if (
-                !(await (isPaused
-                  ? interop.resume(appMD.instanceid)
-                  : interop.pause(appMD.instanceid)))
-              ) {
-                return;
-              }
-              appMD.is_paused = !isPaused;
-              setIsPaused(!isPaused);
-              if ((!isPaused) && Settings.data.autoPause) {
-                backend.setStickyPauseState(Number(app.appid));
-                setHasStickyPauseState(true);
-              } else if (hasStickyPauseState) {
-                backend.resetStickyPauseState(Number(app.appid));
-                setHasStickyPauseState(false);
-              }
-            }}>
-          {
-            <div style={{
-              backgroundImage:
-                "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4))," +
-                `url(${
-                app.icon_data
-                  ? "data:image/" +
-                    app.icon_data_format +
-                    ";base64," +
-                    app.icon_data
-                  : "/assets/" + app.appid + "_icon.jpg?v=" + app.icon_hash
-              })`,
-              backgroundSize: "cover",
-              width: "46px",
-              height: "46px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "-6px",
-              borderRadius: "2px",
-            }}>
-              {isPaused ? (
-                <FaPlay color={hasStickyPauseState ? "deepskyblue" : "white"} />
-              ) : (
-                <FaPause color={hasStickyPauseState ? "deepskyblue" : "white"} />
-              )}
-            </div>
-          }
-          </Button>
-        ) : null
+        <Button
+          style={{ border: "none", background: "none" }}
+          onClick={(_) => onClickPauseButton()}
+          onOKButton={() => onClickPauseButton()}>
+        {
+          <div style={{
+            background: getAppIcon(app),
+            backgroundSize: "cover",
+            width: "46px",
+            height: "46px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "-6px",
+            borderRadius: "2px",
+          }}>
+            {isPaused ? (
+              <FaPlay color={hasStickyPauseState ? "deepskyblue" : "white"} />
+            ) : (
+              <FaPause color={hasStickyPauseState ? "deepskyblue" : "white"} />
+            )}
+          </div>
+        }
+        </Button>
       }
       onChange={async (state) => {
         if (state) {
