@@ -14,6 +14,7 @@ import { useEffect, useState, VFC } from "react";
 import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
 
 import * as backend from "./backend";
+import * as interop from "./interop";
 import { Settings } from "./settings";
 
 const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
@@ -50,16 +51,21 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       checked={!noAutoPauseSet.has(Number(app.appid))}
       key={app.appid}
       label={
-        <div>
+        <div style={{ display: "flex", alignItems: "center", height: "48px" }}>
           <Marquee>{app.display_name}</Marquee>
+        </div>
+      }
+      icon={
+        (app.icon_data && app.icon_data_format) || app.icon_hash ? (
           <Button
-            style= {{ height: "21px" }}
+            style={{ border: "none" }}
             onOKButton={async () => {
+              console.log("Pause", app.appid);
               const appMD = await backend.getAppMetaData(Number(app.appid));
               if (
                 !(await (isPaused
-                  ? backend.resume(appMD.instanceid)
-                  : backend.pause(appMD.instanceid)))
+                  ? interop.resume(appMD.instanceid)
+                  : interop.pause(appMD.instanceid)))
               ) {
                 return;
               }
@@ -73,27 +79,35 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
                 setHasStickyPauseState(false);
               }
             }}>
-          {isPaused ? (
-            <FaPlay color={hasStickyPauseState ? "deepskyblue" : undefined} />
-          ) : (
-            <FaPause color={hasStickyPauseState ? "deepskyblue" : undefined} />
-          )}
+          {
+            <div style={{
+              backgroundImage:
+                "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4))," +
+                `url(${
+                app.icon_data
+                  ? "data:image/" +
+                    app.icon_data_format +
+                    ";base64," +
+                    app.icon_data
+                  : "/assets/" + app.appid + "_icon.jpg?v=" + app.icon_hash
+              })`,
+              backgroundSize: "cover",
+              width: "46px",
+              height: "46px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "-6px",
+              borderRadius: "2px",
+            }}>
+              {isPaused ? (
+                <FaPlay color={hasStickyPauseState ? "deepskyblue" : "white"} />
+              ) : (
+                <FaPause color={hasStickyPauseState ? "deepskyblue" : "white"} />
+              )}
+            </div>
+          }
           </Button>
-        </div>
-      }
-      icon={
-        (app.icon_data && app.icon_data_format) || app.icon_hash ? (
-          <img
-            style={{ maxWidth: 32, maxHeight: 32 }}
-            src={
-              app.icon_data
-                ? "data:image/" +
-                  app.icon_data_format +
-                  ";base64," +
-                  app.icon_data
-                : "/assets/" + app.appid + "_icon.jpg?v=" + app.icon_hash
-            }
-          />
         ) : null
       }
       onChange={async (state) => {
@@ -191,9 +205,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           </strong>
           <br />
           Automatically pauses apps not in focus while switching between them.
-          Manually setting the state of an app in this mode will sticky them{" "}
-          <FaPlay color="deepskyblue" />, <FaPause color="deepskyblue" />. To
-          reset, disable and re-enable <em>Pause on focus loss</em>.
+          Manually pausing an app in this mode will put them in sticky state{" "}
+          <FaPlay color="deepskyblue" /> <FaPause color="deepskyblue" /> until they
+          are manually unpaused.
           <br />
           <strong>
             <em>- Also on overlay</em>
@@ -211,7 +225,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
 };
 
 export default definePlugin((serverApi: ServerAPI) => {
-  backend.setServerAPI(serverApi);
+  interop.setServerAPI(serverApi);
   Settings.init();
   let patch = beforePatch(SteamClient.Apps, "TerminateApp", (inputs: any[]) => {
       backend?.resumeApp?.(inputs[0]);

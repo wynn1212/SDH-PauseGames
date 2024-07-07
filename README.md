@@ -13,7 +13,7 @@ It sends the `SIGSTOP` signal to all the children of the reaper process to stop 
 
 It also allows to pause all games prior to system suspend which seems to fix some issues with crackling audio or freezing emulators.
 
-The **Pause on focus loss** feature will automatically pause apps that are not in focus when switching between them. A bit like the Xbox quick-suspend/resume feature (without the dump to disk functionality unfortunately). If you manually change the state of an app (pause/resume) in this mode it will be stickied and not change state automatically anymore on focus change (depicted by a blue play/pause icon). To reset the stickied states, disable and re-enable **Pause on focus loss**.
+The **Pause on focus loss** feature will automatically pause apps that are not in focus when switching between them. A bit like the Xbox quick-suspend/resume feature (without the dump to disk functionality unfortunately). If you manually pause an app in this mode, it will be put in the sticky state and not unpause automatically anymore on focus change (depicted by a blue play icon) until it is manually unpaused.
 
 In addition to **Pause on focus loss**, **Also on overlay** will also pause apps when the Steam Overlay is on (by pressing the **STEAM** button).
 

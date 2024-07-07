@@ -1,4 +1,4 @@
-import { backend_call } from "./backend";
+import { backend_call } from "./interop";
 
 type SettingStruct = {
     pauseBeforeSuspend: boolean;
