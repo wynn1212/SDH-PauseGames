@@ -46,9 +46,8 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
     };
   }, []);
 
-  let onClickPauseButton = async () => {
+  const onClickPauseButton = async () => {
     {
-      console.log("Pause", app.appid);
       const appMD = await backend.getAppMetaData(Number(app.appid));
       if (
         !(await (isPaused
@@ -59,17 +58,19 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       }
       appMD.is_paused = !isPaused;
       setIsPaused(!isPaused);
-      if ((!isPaused) && Settings.data.autoPause) {
-        backend.setStickyPauseState(Number(app.appid));
-        setHasStickyPauseState(true);
-      } else if (hasStickyPauseState) {
-        backend.resetStickyPauseState(Number(app.appid));
-        setHasStickyPauseState(false);
+      if (Settings.data.autoPause) {
+        if (hasStickyPauseState) {
+          backend.resetStickyPauseState(Number(app.appid));
+          setHasStickyPauseState(false);
+        } else {
+          backend.setStickyPauseState(Number(app.appid));
+          setHasStickyPauseState(true);
+        }
       }
     }
   };
 
-  let getAppIcon = (app: backend.AppOverviewExt) => {
+  const getAppIcon = (app: backend.AppOverviewExt) => {
     let iconUrl;
     if (app.icon_data && app.icon_data_format) {
       iconUrl = `data:image/${app.icon_data_format};base64,${app.icon_data}`;
@@ -213,9 +214,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           </strong>
           <br />
           Automatically pauses apps not in focus while switching between them.
-          Manually pausing an app in this mode will put them in sticky state{" "}
-          <FaPlay color="deepskyblue" /> <FaPause color="deepskyblue" /> until they
-          are manually unpaused.
+          Manually setting the state of an app in this mode will sticky them{" "}
+          <FaPlay color="deepskyblue" /> <FaPause color="deepskyblue" /> until
+          they are manually changed back.
           <br />
           <strong>
             <em>- Also on overlay</em>
