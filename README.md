@@ -8,8 +8,8 @@ Since used RAM and VRAM won't be able to be recovered from paused apps you might
 
 It sends the `SIGSTOP` signal to all the children of the reaper process to stop the execution and `SIGCONT` to resume them. ([Signal (IPC)](https://en.wikipedia.org/wiki/Signal_(IPC)))
 
-![](assets/20230112202158_1.png)
-![](assets/20230112200757_1.jpg)
+![](assets/20240708214008_1.jpg)
+![](assets/20240709000911_1.jpg)
 
 It also allows to pause all games prior to system suspend which seems to fix some issues with crackling audio or freezing emulators.
 
@@ -17,6 +17,13 @@ The **Pause on focus loss** feature will automatically pause apps that are not i
 it is manually changed back.
 
 In addition to **Pause on focus loss**, **Also on overlay** will also pause apps when the Steam Overlay is on (by pressing the **STEAM** button).
+
+## Usage
+
+![](assets/pausegames_usage.jpg)
+
+- To manually pause or resume the game, press the game icon with the pause/play symbol in the **Pause Games list**.
+- To change which game should pause when **Pause on focus loss** is enabled, toggle the switch to the right of the **Pause Games list**.
 
 ## Known Issues
 
@@ -37,4 +44,4 @@ In addition to **Pause on focus loss**, **Also on overlay** will also pause apps
 
 ## Tips
 
-- If you use yuzu (https://yuzu-emu.org/) and want to enable the **Pause on focus loss** feature, make sure to enable **Pause emulation when in background** under **General** Settings in yuzu in order to prevent potentially freezing the emulator completely. You can also Pause/Resume the emulation by binding **F4** to a key and press it just before pausing or after resuming the game with the plugin.
+- If you use S emulator and want to enable the **Pause on focus loss** feature, make sure to enable **Pause emulation when in background** under **General** Settings in yuzu in order to prevent potentially freezing the emulator completely. You can also Pause/Resume the emulation by binding **F4** to a key and press it just before pausing or after resuming the game with the plugin.

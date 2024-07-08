@@ -26,12 +26,12 @@
     "stop",
     "quick-resume"
   ],
-  "author": "Philipp Richter <richterphilipp.pops@gmail.com>",
+  "author": "Philipp Richter <richterphilipp.pops@gmail.com> & wynn1212 <wynn1212@gmail.com> & AkazaRenn",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/popsUlfr/SDH-PauseGames/issues"
+    "url": "https://github.com/wynn1212/SDH-PauseGames/issues"
   },
-  "homepage": "https://github.com/popsUlfr/SDH-PauseGames#readme",
+  "homepage": "https://github.com/wynn1212/SDH-PauseGames#readme",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^21.1.0",
     "@rollup/plugin-json": "^4.1.0",

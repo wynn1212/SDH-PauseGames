@@ -227,6 +227,9 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
           <strong>
             <em>Applications will appear here.</em>
           </strong>
+          <br />
+          To manually pause/resume the apps, press the apps icon.
+          <br />
         </div>
       )}
     </PanelSection>
