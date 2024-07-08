@@ -44,4 +44,4 @@ In addition to **Pause on focus loss**, **Also on overlay** will also pause apps
 
 ## Tips
 
-- If you use S emulator and want to enable the **Pause on focus loss** feature, make sure to enable **Pause emulation when in background** under **General** Settings in yuzu in order to prevent potentially freezing the emulator completely. You can also Pause/Resume the emulation by binding **F4** to a key and press it just before pausing or after resuming the game with the plugin.
+- If you use S emulator and want to enable the **Pause on focus loss** feature, make sure to enable **Pause emulation when in background** under **General** Settings in S emulator in order to prevent potentially freezing the emulator completely. You can also Pause/Resume the emulation by binding **F4** to a key and press it just before pausing or after resuming the game with the plugin.
