@@ -76,12 +76,11 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       iconUrl = `data:image/${app.icon_data_format};base64,${app.icon_data}`;
     } else if (app.icon_hash) {
       iconUrl = `/assets/${app.appid}_icon.jpg?v=${app.icon_hash}`;
+    } else {
+      return "none";
     }
 
-    if (iconUrl) {
-      return `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${iconUrl})`;
-    }
-    return "none";
+    return `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${iconUrl})`;
   }
 
   return (
@@ -89,21 +88,25 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       checked={!noAutoPauseSet.has(Number(app.appid))}
       key={app.appid}
       label={
-        <div style={{ display: "flex", alignItems: "center", height: "48px" }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
           <Marquee>{app.display_name}</Marquee>
         </div>
       }
       icon={
         <Button
-          style={{ border: "none", background: "none" }}
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "none",
+            background: "none" }}
           onClick={(_) => onClickPauseButton()}
           onOKButton={() => onClickPauseButton()}>
         {
           <div style={{
             background: getAppIcon(app),
             backgroundSize: "cover",
-            width: "46px",
-            height: "46px",
+            width: "inherit",
+            height: "inherit",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
