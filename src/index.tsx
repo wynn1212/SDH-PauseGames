@@ -9,6 +9,9 @@ import {
   Router,
   ServerAPI,
   ToggleField,
+  Focusable,
+  Toggle,
+  Field,
 } from "decky-frontend-lib";
 import { useEffect, useState, VFC } from "react";
 import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
@@ -19,9 +22,10 @@ import { Settings } from "./settings";
 
 const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [hasStickyPauseState, setHasStickyPauseState] =
-    useState<boolean>(false);
-  const [noAutoPauseSet] = useState<Set<number>>(Settings.data.noAutoPauseSet);
+  const [hasStickyPauseState, setHasStickyPauseState] = useState<boolean>(false);
+  const [inNoAutoPauseSet, setInNoAutoPauseSet] = useState<boolean>(
+    Settings.data.noAutoPauseSet.has(Number(app.appid))
+  )
 
   useEffect(() => {
     backend.getAppMetaData(Number(app.appid)).then((appMD) => {
@@ -29,17 +33,14 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       setHasStickyPauseState(appMD.sticky_state);
     });
     Settings.load().then(() => {
-      Settings.data.noAutoPauseSet.forEach((id) => noAutoPauseSet.add(id));
-    })
+      setInNoAutoPauseSet(Settings.data.noAutoPauseSet.has(Number(app.appid)));
+    });
     const unregisterPauseStateChange = backend.registerPauseStateChange(
-      Number(app.appid),
-      setIsPaused
+      Number(app.appid), setIsPaused
     );
-    const unregisterStickyPauseStateChange =
-      backend.registerStickyPauseStateChange(
-        Number(app.appid),
-        setHasStickyPauseState
-      );
+    const unregisterStickyPauseStateChange = backend.registerStickyPauseStateChange(
+      Number(app.appid), setHasStickyPauseState
+    );
     return () => {
       unregisterPauseStateChange();
       unregisterStickyPauseStateChange();
@@ -84,16 +85,13 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   }
 
   return (
-    <ToggleField
-      checked={!noAutoPauseSet.has(Number(app.appid))}
-      key={app.appid}
-      label={
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <Marquee>{app.display_name}</Marquee>
-        </div>
-      }
-      icon={
-        <Button
+    <Field childrenLayout="inline" childrenContainerWidth="max">
+    <Focusable style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      padding: "8px 0" }}>
+      <Button
           style={{
             width: "48px",
             height: "48px",
@@ -120,18 +118,29 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
             )}
           </div>
         }
-        </Button>
-      }
-      onChange={async (state) => {
-        if (state) {
-          noAutoPauseSet.delete(Number(app.appid));
-          await Settings.removeNoAutoPauseSet(Number(app.appid));
-        } else {
-          noAutoPauseSet.add(Number(app.appid));
-          await Settings.addNoAutoPauseSet(Number(app.appid));
-        }
-      }}
-    />
+      </Button>
+      <Marquee
+        style={{
+          // maxWidth: "160px",
+          // paddingLeft: "18px",
+          marginRight: "auto" }}>
+        {app.display_name}
+      </Marquee>
+      <div style={{ marginLeft: "auto" }}>
+        <Toggle
+          value={!inNoAutoPauseSet}
+          onChange={async (state) => {
+            setInNoAutoPauseSet(!state);
+            if (state) {
+              Settings.removeNoAutoPauseSet(Number(app.appid));
+            } else {
+              Settings.addNoAutoPauseSet(Number(app.appid));
+            }
+          }}
+        />
+      </div>
+    </Focusable>
+    </Field>
   );
 };
 
