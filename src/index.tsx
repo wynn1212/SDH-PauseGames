@@ -32,9 +32,7 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       setIsPaused(appMD.is_paused);
       setHasStickyPauseState(appMD.sticky_state);
     });
-    Settings.load().then(() => {
-      setInNoAutoPauseSet(Settings.data.noAutoPauseSet.has(Number(app.appid)));
-    });
+    setInNoAutoPauseSet(Settings.data.noAutoPauseSet.has(Number(app.appid)));
     const unregisterPauseStateChange = backend.registerPauseStateChange(
       Number(app.appid), setIsPaused
     );
