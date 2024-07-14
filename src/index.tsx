@@ -85,12 +85,11 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   }
 
   return (
-    <Field spacingBetweenLabelAndChild="none">
+    <Field spacingBetweenLabelAndChild="none" childrenLayout="inline" childrenContainerWidth="fixed">
     <Focusable
       style={{
         display: "flex",
-        alignItems: "center",
-        width: "268px", }}>
+        alignItems: "center",}}>
       <Button
           style={{
             width: "48px",
@@ -122,8 +121,10 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       <div
         style={{
           minWidth: "0",
-          flex: "1 1 0",}}>
-        <Marquee>
+          flex: "1 1 0",
+          paddingRight: "4px",}}>
+        <Marquee style={{
+          paddingLeft: "8px",}}>
           {app.display_name}
         </Marquee>
       </div>
