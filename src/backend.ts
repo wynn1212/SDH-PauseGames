@@ -297,26 +297,24 @@ export function setupFocusChangeHandler(): () => void {
     SteamClient.System.UI.RegisterForFocusChangeEvents(
       throttle(async (fce: FocusChangeEvent) => {
         // don't try anything while an application is launching or it could pause it midlaunch
-        if (appIsStartingUp) return;
+        if (appIsStartingUp) { return; }
         // do nothing if system is suspending
-        if (systemWillSuspend) return;
+        if (systemWillSuspend) { return; }
         // skip if we already got such an event before
         if (
           fce.focusedApp.pid === lastPid &&
           fce.focusedApp.appid === lastAppid &&
           !(validKeyEvent?.eKey === 0)
-        )
-          return;
+        ) { return; }
         lastPid = fce.focusedApp.pid;
         if (
           fce.focusedApp.appid === 769 &&
           lastAppid === 769 &&
           !(validKeyEvent?.eKey === 0)
-        )
-          return;
+        ) { return; }
         lastAppid = fce.focusedApp.appid;
 
-        if (!Settings.data.autoPause) return;
+        if (!Settings.data.autoPause) { return; }
         // AppID 769 is the Steam Overlay or a non-steam app
         // Key event must be if the user pressed the 'STEAM' button. Don't pause for other buttons
         const overlayPause =

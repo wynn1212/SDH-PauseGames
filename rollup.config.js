@@ -26,6 +26,8 @@ export default defineConfig({
   context: 'window',
   external: ['react', 'react-dom', 'decky-frontend-lib'],
   output: {
+    name: 'Pause Games',
+    extend: true,
     file: 'dist/index.js',
     globals: {
       react: 'SP_REACT',

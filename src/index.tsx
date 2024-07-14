@@ -3,11 +3,14 @@ import {
   definePlugin,
   staticClasses,
   Button,
+  Field,
+  Focusable,
   Marquee,
   PanelSection,
   PanelSectionRow,
   Router,
   ServerAPI,
+  Toggle,
   ToggleField,
 } from "decky-frontend-lib";
 import { useEffect, useState, VFC } from "react";
@@ -19,27 +22,23 @@ import { Settings } from "./settings";
 
 const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [hasStickyPauseState, setHasStickyPauseState] =
-    useState<boolean>(false);
-  const [noAutoPauseSet] = useState<Set<number>>(Settings.data.noAutoPauseSet);
+  const [hasStickyPauseState, setHasStickyPauseState] = useState<boolean>(false);
+  const [inNoAutoPauseSet, setInNoAutoPauseSet] = useState<boolean>(
+    Settings.data.noAutoPauseSet.has(Number(app.appid))
+  )
 
   useEffect(() => {
     backend.getAppMetaData(Number(app.appid)).then((appMD) => {
       setIsPaused(appMD.is_paused);
       setHasStickyPauseState(appMD.sticky_state);
     });
-    Settings.load().then(() => {
-      Settings.data.noAutoPauseSet.forEach((id) => noAutoPauseSet.add(id));
-    })
+    setInNoAutoPauseSet(Settings.data.noAutoPauseSet.has(Number(app.appid)));
     const unregisterPauseStateChange = backend.registerPauseStateChange(
-      Number(app.appid),
-      setIsPaused
+      Number(app.appid), setIsPaused
     );
-    const unregisterStickyPauseStateChange =
-      backend.registerStickyPauseStateChange(
-        Number(app.appid),
-        setHasStickyPauseState
-      );
+    const unregisterStickyPauseStateChange = backend.registerStickyPauseStateChange(
+      Number(app.appid), setHasStickyPauseState
+    );
     return () => {
       unregisterPauseStateChange();
       unregisterStickyPauseStateChange();
@@ -76,38 +75,37 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
       iconUrl = `data:image/${app.icon_data_format};base64,${app.icon_data}`;
     } else if (app.icon_hash) {
       iconUrl = `/assets/${app.appid}_icon.jpg?v=${app.icon_hash}`;
+    } else {
+      return "none";
     }
 
-    if (iconUrl) {
-      return `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${iconUrl})`;
-    }
-    return "none";
+    return `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url(${iconUrl})`;
   }
 
   return (
-    <ToggleField
-      checked={!noAutoPauseSet.has(Number(app.appid))}
-      key={app.appid}
-      label={
-        <div style={{ display: "flex", alignItems: "center", height: "48px" }}>
-          <Marquee>{app.display_name}</Marquee>
-        </div>
-      }
-      icon={
-        <Button
-          style={{ border: "none", background: "none" }}
+    <Field spacingBetweenLabelAndChild="none" childrenLayout="inline" childrenContainerWidth="fixed">
+    <Focusable
+      style={{
+        display: "flex",
+        alignItems: "center",}}>
+      <Button
+          style={{
+            width: "48px",
+            height: "48px",
+            border: "none",
+            background: "none",
+            padding: "0",}}
           onClick={(_) => onClickPauseButton()}
           onOKButton={() => onClickPauseButton()}>
         {
           <div style={{
             background: getAppIcon(app),
             backgroundSize: "cover",
-            width: "46px",
-            height: "46px",
+            width: "inherit",
+            height: "inherit",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "-6px",
             borderRadius: "2px",
           }}>
             {isPaused ? (
@@ -117,18 +115,30 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
             )}
           </div>
         }
-        </Button>
-      }
-      onChange={async (state) => {
-        if (state) {
-          noAutoPauseSet.delete(Number(app.appid));
-          await Settings.removeNoAutoPauseSet(Number(app.appid));
-        } else {
-          noAutoPauseSet.add(Number(app.appid));
-          await Settings.addNoAutoPauseSet(Number(app.appid));
-        }
-      }}
-    />
+      </Button>
+      <div
+        style={{
+          minWidth: "0",
+          flex: "1 1 0",
+          paddingRight: "8px",}}>
+        <Marquee style={{
+          paddingLeft: "8px",}}>
+          {app.display_name}
+        </Marquee>
+      </div>
+      <Toggle
+        value={!inNoAutoPauseSet}
+        onChange={async (state) => {
+          setInNoAutoPauseSet(!state);
+          if (state) {
+            Settings.removeNoAutoPauseSet(Number(app.appid));
+          } else {
+            Settings.addNoAutoPauseSet(Number(app.appid));
+          }
+        }}
+      />
+    </Focusable>
+    </Field>
   );
 };
 
