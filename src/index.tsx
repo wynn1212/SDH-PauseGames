@@ -120,7 +120,7 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
         style={{
           minWidth: "0",
           flex: "1 1 0",
-          paddingRight: "4px",}}>
+          paddingRight: "8px",}}>
         <Marquee style={{
           paddingLeft: "8px",}}>
           {app.display_name}
