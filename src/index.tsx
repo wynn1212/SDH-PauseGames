@@ -85,18 +85,19 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
   }
 
   return (
-    <Field childrenLayout="inline" childrenContainerWidth="max">
-    <Focusable style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      padding: "8px 0" }}>
+    <Field spacingBetweenLabelAndChild="none">
+    <Focusable
+      style={{
+        display: "flex",
+        alignItems: "center",
+        width: "268px", }}>
       <Button
           style={{
             width: "48px",
             height: "48px",
             border: "none",
-            background: "none" }}
+            background: "none",
+            padding: "0",}}
           onClick={(_) => onClickPauseButton()}
           onOKButton={() => onClickPauseButton()}>
         {
@@ -108,7 +109,6 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "-6px",
             borderRadius: "2px",
           }}>
             {isPaused ? (
@@ -119,26 +119,25 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
           </div>
         }
       </Button>
-      <Marquee
+      <div
         style={{
-          // maxWidth: "160px",
-          // paddingLeft: "18px",
-          marginRight: "auto" }}>
-        {app.display_name}
-      </Marquee>
-      <div style={{ marginLeft: "auto" }}>
-        <Toggle
-          value={!inNoAutoPauseSet}
-          onChange={async (state) => {
-            setInNoAutoPauseSet(!state);
-            if (state) {
-              Settings.removeNoAutoPauseSet(Number(app.appid));
-            } else {
-              Settings.addNoAutoPauseSet(Number(app.appid));
-            }
-          }}
-        />
+          minWidth: "0",
+          flex: "1 1 0",}}>
+        <Marquee>
+          {app.display_name}
+        </Marquee>
       </div>
+      <Toggle
+        value={!inNoAutoPauseSet}
+        onChange={async (state) => {
+          setInNoAutoPauseSet(!state);
+          if (state) {
+            Settings.removeNoAutoPauseSet(Number(app.appid));
+          } else {
+            Settings.addNoAutoPauseSet(Number(app.appid));
+          }
+        }}
+      />
     </Focusable>
     </Field>
   );
