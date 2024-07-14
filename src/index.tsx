@@ -3,15 +3,15 @@ import {
   definePlugin,
   staticClasses,
   Button,
+  Field,
+  Focusable,
   Marquee,
   PanelSection,
   PanelSectionRow,
   Router,
   ServerAPI,
-  ToggleField,
-  Focusable,
   Toggle,
-  Field,
+  ToggleField,
 } from "decky-frontend-lib";
 import { useEffect, useState, VFC } from "react";
 import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
