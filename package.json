@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/popsUlfr/SDH-PauseGames.git"
+    "url": "git+https://github.com/wynn1212/SDH-PauseGames.git"
   },
   "keywords": [
     "decky",
@@ -26,7 +26,7 @@
     "stop",
     "quick-resume"
   ],
-  "author": "Philipp Richter <richterphilipp.pops@gmail.com> & wynn1212 <wynn1212@gmail.com> & AkazaRenn",
+  "author": "Philipp Richter <richterphilipp.pops@gmail.com> & wynn1212 <wynn1212@gmail.com> & AkazaRenn <@Renn@iee.enegineer>",
   "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/wynn1212/SDH-PauseGames/issues"
