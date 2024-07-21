@@ -20,7 +20,7 @@ import * as backend from "./backend";
 import * as interop from "./interop";
 import { Settings } from "./settings";
 
-const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
+const AppItem: VFC<{ app: backend.AppOverviewExt, autoPause: boolean }> = ({ app, autoPause }) => {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [hasStickyPauseState, setHasStickyPauseState] = useState<boolean>(false);
   const [inNoAutoPauseSet, setInNoAutoPauseSet] = useState<boolean>(
@@ -130,17 +130,19 @@ const AppItem: VFC<{ app: backend.AppOverviewExt }> = ({ app }) => {
           {app.display_name}
         </Marquee>
       </div>
-      <Toggle
-        value={!inNoAutoPauseSet}
-        onChange={async (state) => {
-          setInNoAutoPauseSet(!state);
-          if (state) {
-            Settings.removeNoAutoPauseSet(Number(app.appid));
-          } else {
-            Settings.addNoAutoPauseSet(Number(app.appid));
-          }
-        }}
-      />
+      {autoPause && (
+        <Toggle
+          value={!inNoAutoPauseSet}
+          onChange={async (state) => {
+            setInNoAutoPauseSet(!state);
+            if (state) {
+              Settings.removeNoAutoPauseSet(Number(app.appid));
+            } else {
+              Settings.addNoAutoPauseSet(Number(app.appid));
+            }
+          }}
+        />
+      )}
     </Focusable>
     </Field>
   );
@@ -210,7 +212,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
       {runningApps.length ? (
         runningApps.map((app) => (
           <PanelSectionRow key={app.appid}>
-            <AppItem app={app} />
+            <AppItem app={app} autoPause={autoPause} />
           </PanelSectionRow>
         ))
       ) : (
