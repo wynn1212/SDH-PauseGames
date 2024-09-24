@@ -43,9 +43,6 @@ class Plugin:
     async def _uninstall(self):
         pass
 
-    async def start_timer(self):
-        self.loop.create_task(self.long_running())
-
     # Migrations that should be performed before entering `_main()`.
     async def _migration(self):
         pass
