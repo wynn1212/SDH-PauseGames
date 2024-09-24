@@ -4,7 +4,7 @@ import {
   DisplayStatus,
   sleep,
   LifetimeNotification,
-} from "decky-frontend-lib";
+} from "@decky/ui";
 import { debounce, throttle } from "lodash";
 import {
   appid_from_pid,

@@ -33,8 +33,14 @@ class Plugin:
         self.settings = SettingsManager(name="settings", settings_directory=decky_plugin.DECKY_PLUGIN_SETTINGS_DIR)
         self.settings.read()
 
-    # Function called first during the unload process, utilize this to handle your plugin being removed
+    # Function called first during the unload process, utilize this to handle your plugin being stopped, but not
+    # completely removed
     async def _unload(self):
+        pass
+
+    # Function called after `_unload` during uninstall, utilize this to clean up processes and other remnants of your
+    # plugin that may remain on the system
+    async def _uninstall(self):
         pass
 
     # Migrations that should be performed before entering `_main()`.
@@ -150,6 +156,3 @@ class Plugin:
         curr = set(self.settings.getSetting("noAutoPauseSet", []))
         curr.discard(appid)
         self.settings.setSetting("noAutoPauseSet", list(curr))
-
-    async def in_no_auto_pause_set(self, appid: int) -> bool:
-        return appid in self.settings.getSetting("noAutoPauseSet", [])
