@@ -1,5 +1,13 @@
 # Pause Games
 
+Original Repo: https://github.com/popsUlfr/SDH-PauseGames
+
+This is a continuation of **popsUlfr's Pause Games** plugin, updated to support the latest Decky Loader and new features.
+
+A big thanks to **popsUlfr** for developing this amazing plugin!
+
+***
+
 A Steam Deck plugin for the [Decky Plugin Loader](https://github.com/SteamDeckHomebrew/decky-loader) that makes it possible to pause and resume games even for those that don't have an immediate pause option.
 
 Useful for when you wish to temporarily suspend an application in order to redirect the cpu and gpu ressources to another without having to close it.
@@ -27,6 +35,8 @@ In addition to **Pause on focus loss**, **Also on overlay** will also pause apps
 
 ## Known Issues
 
+- If there is at least one game/app running, launching another **non-steam game/app** will remain paused if **Pause on focus loss** is **enabled** and the **non-steam game/app** toggle switch is **enabled** on the right of the **Pause Games list**. To solve this issue, manually resume the **non-steam game/app**, wait for it to fully launch, then manually pause it again. This will restore the proper state of **Pause on focus loss** when switching between different **games/apps**.
+  - After discussing why **non-steam game/app** are paused on startup (as detailed in https://github.com/wynn1212/SDH-PauseGames/pull/1#issuecomment-2211842817 and https://github.com/wynn1212/SDH-PauseGames/pull/2#issuecomment-2214389447), we concluded that it is a Steam client issue. The issue occurred due to a specific Steam client update that changed how **non-steam games/apps** are launched, causing them to start in the background instead of the foreground. As a result, the **non-steam games/apps** are never focused before being paused. We have reported this issue at https://github.com/ValveSoftware/steam-for-linux/issues/11078.
 - some games may not like being stopped and resumed too many times over extended periods of play while others work without issues. Make sure to save often if you intend to switch between games with the **Pause on focus loss** feature enabled.
 - some games may stop responding to input once they are resumed which could be an issue related to the Steam Client getting confused between different control layouts used by the running games. Sometimes force resuming or closing another running game can fix the input issue.
 
