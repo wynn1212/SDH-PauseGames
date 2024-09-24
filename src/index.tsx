@@ -1,7 +1,5 @@
 import {
   beforePatch,
-  definePlugin,
-  staticClasses,
   Button,
   Field,
   Focusable,
@@ -9,18 +7,18 @@ import {
   PanelSection,
   PanelSectionRow,
   Router,
-  ServerAPI,
   Toggle,
   ToggleField,
-} from "decky-frontend-lib";
-import { useEffect, useState, VFC } from "react";
+} from "@decky/ui";
+import { definePlugin } from "@decky/api";
+import { useEffect, useState } from "react";
 import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
 
 import * as backend from "./backend";
-import * as interop from "./interop";
+import { pause, resume } from "./interop";
 import { Settings } from "./settings";
 
-const AppItem: VFC<{ app: backend.AppOverviewExt, autoPause: boolean }> = ({ app, autoPause }) => {
+function AppItem({app, autoPause}: {app: backend.AppOverviewExt, autoPause: boolean}) {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [hasStickyPauseState, setHasStickyPauseState] = useState<boolean>(false);
   const [inNoAutoPauseSet, setInNoAutoPauseSet] = useState<boolean>(
@@ -50,8 +48,8 @@ const AppItem: VFC<{ app: backend.AppOverviewExt, autoPause: boolean }> = ({ app
       const appMD = await backend.getAppMetaData(Number(app.appid));
       if (
         !(await (isPaused
-          ? interop.resume(appMD.instanceid)
-          : interop.pause(appMD.instanceid)))
+          ? resume(appMD.instanceid)
+          : pause(appMD.instanceid)))
       ) {
         return;
       }
@@ -148,7 +146,7 @@ const AppItem: VFC<{ app: backend.AppOverviewExt, autoPause: boolean }> = ({ app
   );
 };
 
-const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
+function Content() {
   const [runningApps, setRunningApps] = useState<backend.AppOverviewExt[]>(
     Router.RunningApps as backend.AppOverviewExt[]
   );
@@ -252,8 +250,7 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   );
 };
 
-export default definePlugin((serverApi: ServerAPI) => {
-  interop.setServerAPI(serverApi);
+export default definePlugin(() => {
   Settings.init();
   let patch = beforePatch(SteamClient.Apps, "TerminateApp", (inputs: any[]) => {
       backend?.resumeApp?.(inputs[0]);
@@ -263,8 +260,8 @@ export default definePlugin((serverApi: ServerAPI) => {
   const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();
 
   return {
-    title: <div className={staticClasses.Title}>Pause Games</div>,
-    content: <Content serverAPI={serverApi} />,
+    name: "Pause Games",
+    content: <Content />,
     icon: <FaPause />,
     onDismount() {
       patch.unpatch();

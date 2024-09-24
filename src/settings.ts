@@ -1,6 +1,12 @@
-import { backend_call } from "./interop";
+import {
+  load_settings,
+  save_setting,
+  add_no_auto_pause_set,
+  remove_no_auto_pause_set
+} from "./interop";
 
 type SettingStruct = {
+    [key: string]: any;
     pauseBeforeSuspend: boolean;
     autoPause: boolean;
     overlayPause: boolean;
@@ -19,15 +25,22 @@ type SettingStruct = {
 
     static async init(): Promise<void> {
       await Settings.migrate();
-      await Settings.load();
+      await Settings.loadAll();
     }
 
-    static async load(): Promise<void> {
-      try {
-        let data = await backend_call<{}, SettingStruct>("load_settings", {});
-        Settings.data = { ...Settings.data, ...data };
-        Settings.data.noAutoPauseSet = new Set(data.noAutoPauseSet);
-      } catch (e) {}
+    static async loadAll(): Promise<void> {
+      let data = await load_settings();
+      for (let key in Settings.data) {
+        if (key in data) {
+          try {
+            if (Settings.data[key] instanceof Set) {
+              Settings.data[key] = new Set(data[key]);
+            } else {
+              Settings.data[key] = data[key];
+            }
+          } catch (e) { console.log(e); }
+        }
+      }
 
       Settings.saveAll();
     }
@@ -36,9 +49,9 @@ type SettingStruct = {
       Settings.data[key] = value;
 
       if (value instanceof Set) {
-        backend_call<{ key: string; value: Array<number> }, void>("save_setting", {key, value: [...value]});
+        save_setting(key.toString(), [...value]);
       } else {
-        backend_call<{ key: string; value: SettingStruct[keyof SettingStruct] }, void>("save_setting", {key, value});
+        save_setting(key.toString(), value);
       }
     }
 
@@ -63,11 +76,11 @@ type SettingStruct = {
 
     static async addNoAutoPauseSet(appid: number): Promise<void> {
       Settings.data.noAutoPauseSet.add(appid);
-      return backend_call<{ appid: number }, void>("add_no_auto_pause_set", { appid });
+      return add_no_auto_pause_set(appid);
     }
 
     static async removeNoAutoPauseSet(appid: number): Promise<void> {
       Settings.data.noAutoPauseSet.delete(appid);
-      return backend_call<{ appid: number }, void>("remove_no_auto_pause_set", { appid });
+      return remove_no_auto_pause_set(appid);
     }
   }
