@@ -1,5 +1,6 @@
 import sys
 import subprocess
+import os
 from typing import Any
 
 # The decky plugin module is located at decky-loader/plugin
@@ -15,7 +16,9 @@ def get_all_children(pid: int) -> list[str]:
         while tmpPids:
             ppid = tmpPids.pop(0)
             lines = []
-            with subprocess.Popen(["ps", "--ppid", ppid, "-o", "pid="], stdout=subprocess.PIPE) as p:
+            clean_env = os.environ.copy()
+            clean_env["LD_LIBRARY_PATH"] = ""
+            with subprocess.Popen(["ps", "--ppid", ppid, "-o", "pid="], stdout=subprocess.PIPE, env=clean_env) as p:
                 lines = p.stdout.readlines()
             for chldPid in lines:
                 chldPid = chldPid.strip()
@@ -49,7 +52,9 @@ class Plugin:
 
     async def is_paused(self, pid: int) -> bool:
         try:
-            with subprocess.Popen(["ps", "--ppid", str(pid), "-o", "stat="], stdout=subprocess.PIPE) as p:
+            clean_env = os.environ.copy()
+            clean_env["LD_LIBRARY_PATH"] = ""
+            with subprocess.Popen(["ps", "--ppid", str(pid), "-o", "stat="], stdout=subprocess.PIPE, env=clean_env) as p:
                 return p.stdout.readline().lstrip().startswith(b'T')
         except:
             return False
@@ -60,7 +65,9 @@ class Plugin:
             command = ["kill", "-SIGSTOP"]
             command.extend(pids)
             try:
-                return subprocess.run(command, stderr=sys.stderr, stdout=sys.stdout).returncode == 0
+                clean_env = os.environ.copy()
+                clean_env["LD_LIBRARY_PATH"] = ""
+                return subprocess.run(command, stderr=sys.stderr, stdout=sys.stdout, env=clean_env).returncode == 0
             except:
                 return False
         else:
@@ -73,7 +80,9 @@ class Plugin:
             command = ["kill", "-SIGCONT"]
             command.extend(pids)
             try:
-                return subprocess.run(command, stderr=sys.stderr, stdout=sys.stdout).returncode == 0
+                clean_env = os.environ.copy()
+                clean_env["LD_LIBRARY_PATH"] = ""
+                return subprocess.run(command, stderr=sys.stderr, stdout=sys.stdout, env=clean_env).returncode == 0
             except:
                 return False
         else:
@@ -85,7 +94,9 @@ class Plugin:
             command = ["kill", "-SIGTERM"]
             command.extend(pids)
             try:
-                return subprocess.run(command, stderr=sys.stderr, stdout=sys.stdout).returncode == 0
+                clean_env = os.environ.copy()
+                clean_env["LD_LIBRARY_PATH"] = ""
+                return subprocess.run(command, stderr=sys.stderr, stdout=sys.stdout, env=clean_env).returncode == 0
             except:
                 return False
         else:
@@ -97,7 +108,9 @@ class Plugin:
             command = ["kill", "-SIGKILL"]
             command.extend(pids)
             try:
-                return subprocess.run(command, stderr=sys.stderr, stdout=sys.stdout).returncode == 0
+                clean_env = os.environ.copy()
+                clean_env["LD_LIBRARY_PATH"] = ""
+                return subprocess.run(command, stderr=sys.stderr, stdout=sys.stdout, env=clean_env).returncode == 0
             except:
                 return False
         else:
@@ -106,7 +119,9 @@ class Plugin:
     async def pid_from_appid(self, appid: int) -> int:
         pid = ""
         try:
-            with subprocess.Popen(["pgrep", "--full", "--oldest", f"/reaper\\s.*\\bAppId={appid}\\b"], stdout=subprocess.PIPE) as p:
+            clean_env = os.environ.copy()
+            clean_env["LD_LIBRARY_PATH"] = ""
+            with subprocess.Popen(["pgrep", "--full", "--oldest", f"/reaper\\s.*\\bAppId={appid}\\b"], stdout=subprocess.PIPE, env=clean_env) as p:
                 pid = p.stdout.read().strip()
         except:
             return 0
@@ -131,7 +146,9 @@ class Plugin:
                 pass
             try:
                 strppid = ""
-                with subprocess.Popen(["ps", "--pid", str(pid), "-o", "ppid="], stdout=subprocess.PIPE) as p:
+                clean_env = os.environ.copy()
+                clean_env["LD_LIBRARY_PATH"] = ""
+                with subprocess.Popen(["ps", "--pid", str(pid), "-o", "ppid="], stdout=subprocess.PIPE, env=clean_env) as p:
                     strppid = p.stdout.read().strip()
                 if strppid:
                     pid = int(strppid)
