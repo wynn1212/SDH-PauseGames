@@ -1,6 +1,6 @@
 {
   "name": "pause-games",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Pause/Resume games to redirect resources and even play/stop apps that don't natively have an immediate option to do so.",
   "packageManager": "pnpm@9.11.0",
   "type": "module",
