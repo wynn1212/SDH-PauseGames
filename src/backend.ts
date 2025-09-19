@@ -234,7 +234,8 @@ export function registerForRunningAppsChange(
   };
 }
 
-export function setupSuspendResumeHandler(): () => void {
+// Commented below due to removal of pauseBeforeSuspend
+/*export function setupSuspendResumeHandler(): () => void {
   const { unregister: unregisterOnSuspendRequest } =
     SteamClient.System.RegisterForOnSuspendRequest(async () => {
       systemWillSuspend = true;
@@ -268,7 +269,7 @@ export function setupSuspendResumeHandler(): () => void {
     unregisterOnSuspendRequest();
     unregisterOnResumeFromSuspend();
   };
-}
+}*/
 
 export function setupFocusChangeHandler(): () => void {
   let appIsStartingUp: boolean = false;
