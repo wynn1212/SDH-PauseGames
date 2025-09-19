@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - pause-on-suspend
   pull_request_target:
     branches: ['*']
 
