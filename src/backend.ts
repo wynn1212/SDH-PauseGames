@@ -50,6 +50,14 @@ declare var SteamClient: {
       RegisterForSystemKeyEvents: (cb: (key: SystemKeyEvent) => void) => void;
     };
   };
+  User: {
+    RegisterForPrepareForSystemSuspendProgress: (cb: () => Promise<any> | void) => {
+      unregister: () => void;
+    }
+		RegisterForResumeSuspendedGamesProgress: (cb: () => Promise<any> | void) => {
+      unregister: () => void;
+    }
+  };
 };
 
 export interface SystemKeyEvent {
@@ -236,7 +244,7 @@ export function registerForRunningAppsChange(
 
 export function setupSuspendResumeHandler(): () => void {
   const { unregister: unregisterOnSuspendRequest } =
-    SteamClient.System.RegisterForOnSuspendRequest(async () => {
+    SteamClient.User.RegisterForPrepareForSystemSuspendProgress(async () => {
       systemWillSuspend = true;
       if (!Settings.data.pauseBeforeSuspend) return;
       await Promise.all(
@@ -253,7 +261,7 @@ export function setupSuspendResumeHandler(): () => void {
     });
 
   const { unregister: unregisterOnResumeFromSuspend } =
-    SteamClient.System.RegisterForOnResumeFromSuspend(async () => {
+    SteamClient.User.RegisterForResumeSuspendedGamesProgress(async () => {
       systemWillSuspend = false;
       if (!Settings.data.pauseBeforeSuspend) return;
       await Promise.all(
