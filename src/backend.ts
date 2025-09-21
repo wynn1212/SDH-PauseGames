@@ -55,12 +55,16 @@ declare var SteamClient: {
     };
   };
   User: {
-    RegisterForPrepareForSystemSuspendProgress: (cb: () => Promise<any> | void) => {
+    RegisterForPrepareForSystemSuspendProgress: (
+      cb: () => Promise<any> | void,
+    ) => {
       unregister: () => void;
-    }
-		RegisterForResumeSuspendedGamesProgress: (cb: () => Promise<any> | void) => {
+    };
+    RegisterForResumeSuspendedGamesProgress: (
+      cb: () => Promise<any> | void,
+    ) => {
       unregister: () => void;
-    }
+    };
   };
 };
 
@@ -293,7 +297,7 @@ export function setupSuspendResumeHandler(): () => void {
 
   const unregisterOnResumeFromSuspend = resumeObservable?.observe_((change) => {
     const { newValue } = change;
-    console.log({ info: `mobX suspend triggered with ${newValue}` });
+    console.log({ info: `mobX resume triggered with ${newValue}` });
     if (!newValue) {
       return;
     }
