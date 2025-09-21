@@ -12,7 +12,7 @@ import {
 } from "@decky/ui";
 import { definePlugin } from "@decky/api";
 import { useEffect, useState } from "react";
-import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
+import { FaStream, FaPlay, FaPause/*, FaMoon*/ } from "react-icons/fa"; //FaMoon is commented due to removal of pauseBeforeSuspend
 
 import * as backend from "./backend";
 import { pause, resume } from "./interop";
@@ -150,7 +150,8 @@ function Content() {
   const [runningApps, setRunningApps] = useState<backend.AppOverviewExt[]>(
     Router.RunningApps as backend.AppOverviewExt[]
   );
-  const [pauseBeforeSuspend, setPauseBeforeSuspend] = useState<boolean>(Settings.data.pauseBeforeSuspend);
+  // Commented below due to removal of pauseBeforeSuspend
+  //const [pauseBeforeSuspend, setPauseBeforeSuspend] = useState<boolean>(Settings.data.pauseBeforeSuspend);
   const [autoPause, setAutoPause] = useState<boolean>(Settings.data.autoPause);
   const [overlayPause, setOverlayPause] = useState<boolean>(Settings.data.overlayPause);
 
@@ -165,8 +166,8 @@ function Content() {
     };
   }, []);
 
-  return (
-    <PanelSection>
+  // Commented below within return code due to removal of pauseBeforeSuspend
+  /*
       <PanelSectionRow>
         <ToggleField
           checked={pauseBeforeSuspend}
@@ -179,6 +180,10 @@ function Content() {
           }}
         />
       </PanelSectionRow>
+  */
+  
+  return (
+    <PanelSection>
       <PanelSectionRow>
         <ToggleField
           bottomSeparator={autoPause ? "none" : "standard"}
@@ -216,12 +221,16 @@ function Content() {
       ) : (
         <div style={{ fontSize: "80%" }}>
           <strong>
-            <em>- Pause before Suspend</em>
+            <em>- <s>Pause before Suspend</s> 
+            <br />
+            (Suspend Hooks Being Removed from Steam Beta Client)</em>
           </strong>
           <br />
-          Pauses all apps before system suspend.
+          For more information, please follow issue #10 on wynn1212/SDH-PauseGames
           <br />
-          May fix audio issues.
+          <s>Pauses all apps before system suspend.</s>
+          <br />
+          <s>May fix audio issues.</s>
           <br />
           <strong>
             <em>- Pause on focus loss</em>
@@ -257,7 +266,8 @@ export default definePlugin(() => {
   });
 
   const unregisterFocusChangeHandler = backend.setupFocusChangeHandler();
-  const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();
+  // Commented below due to removal of pauseBeforeSuspend
+  //const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();
 
   return {
     name: "Pause Games",
@@ -266,7 +276,8 @@ export default definePlugin(() => {
     onDismount() {
       patch.unpatch();
       unregisterFocusChangeHandler();
-      unregisterSuspendResumeHandler();
+      // Commented below due to removal of pauseBeforeSuspend
+      //unregisterSuspendResumeHandler();
     },
   };
 });
