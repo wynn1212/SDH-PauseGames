@@ -54,6 +54,14 @@ declare var SteamClient: {
       RegisterForSystemKeyEvents: (cb: (key: SystemKeyEvent) => void) => void;
     };
   };
+  User: {
+    RegisterForPrepareForSystemSuspendProgress: (cb: () => Promise<any> | void) => {
+      unregister: () => void;
+    }
+		RegisterForResumeSuspendedGamesProgress: (cb: () => Promise<any> | void) => {
+      unregister: () => void;
+    }
+  };
 };
 
 export interface SystemKeyEvent {
