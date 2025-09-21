@@ -308,7 +308,7 @@ export function setupSuspendResumeHandler(): () => void {
     unregisterOnSuspendRequest && unregisterOnSuspendRequest();
     unregisterOnResumeFromSuspend && unregisterOnResumeFromSuspend();
   };
-}*/
+}
 
 export function setupFocusChangeHandler(): () => void {
   let appIsStartingUp: boolean = false;
