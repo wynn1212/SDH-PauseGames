@@ -1,9 +1,7 @@
 import {
   Router,
   AppOverview,
-  DisplayStatus,
   sleep,
-  LifetimeNotification,
 } from "@decky/ui";
 import { debounce, throttle } from "lodash";
 import {
@@ -75,7 +73,7 @@ export interface SystemKeyEvent {
 }
 
 // object passed to the callback of SteamClient.GameSessions.RegisterForAppLifetimeNotifications()
-export interface LifetimeNotificationExt extends LifetimeNotification {
+export interface LifetimeNotificationExt extends AppLifetimeNotification {
   unAppID: number; // Steam AppID, may be 0 if non-steam game
   nInstanceID: number; // PID of the running or killed process, it's the pid of the reaper for non-steam apps or of the first child if a steam app
   bRunning: boolean; // if the game is running or not
@@ -84,7 +82,7 @@ export interface LifetimeNotificationExt extends LifetimeNotification {
 export interface AppOverviewExt extends AppOverview {
   appid: string; // base
   display_name: string; // base
-  display_status: DisplayStatus; // base
+  display_status: EDisplayStatus; // base
   sort_as: string; // base
   icon_data: string; // base, base64 encoded image
   icon_data_format: string; // base, image type without "image/" (e.g.: jpg, png)
