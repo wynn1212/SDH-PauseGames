@@ -14,25 +14,29 @@ import {
   resume,
 } from "./interop";
 import { Settings } from "./settings";
+import {
+  getResumeObservable,
+  getSuspendObservable,
+} from "./sleep/suspendResumeObservables";
 
 // only the needed subset of the SteamClient
 declare var SteamClient: {
   GameSessions: {
     RegisterForAppLifetimeNotifications: (
-      cb: (app: LifetimeNotificationExt) => void
+      cb: (app: LifetimeNotificationExt) => void,
     ) => { unregister: () => void };
   };
   Apps: {
     RegisterForGameActionStart: (
-      cb: (actionType: number, gameID: string, status: string) => void
+      cb: (actionType: number, gameID: string, status: string) => void,
     ) => { unregister: () => void };
     RegisterForGameActionTaskChange: (
       cb: (
         actionType: number,
         gameID: string,
         action: string,
-        status: string
-      ) => void
+        status: string,
+      ) => void,
     ) => { unregister: () => void };
   };
   System: {
@@ -51,12 +55,16 @@ declare var SteamClient: {
     };
   };
   User: {
-    RegisterForPrepareForSystemSuspendProgress: (cb: () => Promise<any> | void) => {
+    RegisterForPrepareForSystemSuspendProgress: (
+      cb: () => Promise<any> | void,
+    ) => {
       unregister: () => void;
-    }
-		RegisterForResumeSuspendedGamesProgress: (cb: () => Promise<any> | void) => {
+    };
+    RegisterForResumeSuspendedGamesProgress: (
+      cb: () => Promise<any> | void,
+    ) => {
       unregister: () => void;
-    }
+    };
   };
 };
 
@@ -132,7 +140,7 @@ export async function resumeApp(appid: number | string) {
     if (id > BigInt(0xffffffff)) {
       // non-steam game
       // https://gaming.stackexchange.com/questions/386882/how-do-i-find-the-appid-for-a-non-steam-game-on-steam
-      id = id / (BigInt(2) ** BigInt(32));
+      id = id / BigInt(2) ** BigInt(32);
     }
     appid = Number(id);
   }
@@ -166,7 +174,7 @@ export function resetStickyPauseStates() {
 
 export function registerPauseStateChange(
   appid: number,
-  cb: (state: boolean) => void
+  cb: (state: boolean) => void,
 ) {
   getAppMetaData(appid).then((appMD) => {
     appMD.pause_state_callbacks.push(cb);
@@ -183,7 +191,7 @@ export function registerPauseStateChange(
 
 export function registerStickyPauseStateChange(
   appid: number,
-  cb: (state: boolean) => void
+  cb: (state: boolean) => void,
 ) {
   getAppMetaData(appid).then((appMD) => {
     appMD.sticky_state_callbacks.push(cb);
@@ -206,7 +214,7 @@ export function removeAppMetaData(appid: number) {
 export function cleanupAppMetaData() {
   const rApps = Router.RunningApps;
   const appids = Object.keys(appMetaDataMap).filter(
-    (appid) => rApps.findIndex((a) => Number(a.appid) === Number(appid)) < 0
+    (appid) => rApps.findIndex((a) => Number(a.appid) === Number(appid)) < 0,
   );
   appids.forEach((appid) => {
     removeAppMetaData(Number(appid));
@@ -214,7 +222,7 @@ export function cleanupAppMetaData() {
 }
 
 export function registerForRunningAppsChange(
-  cb: (runningApps: AppOverviewExt[]) => void
+  cb: (runningApps: AppOverviewExt[]) => void,
 ): () => void {
   const { unregister: unregisterGameActionTaskChange } =
     SteamClient.Apps.RegisterForGameActionTaskChange(
@@ -222,7 +230,7 @@ export function registerForRunningAppsChange(
         if (status !== "Completed") return;
         // at this point the application should be up and running
         return cb(Router.RunningApps as AppOverviewExt[]);
-      }
+      },
     );
   const { unregister: unregisterAppLifetimeNotifications } =
     SteamClient.GameSessions.RegisterForAppLifetimeNotifications((app) => {
@@ -243,38 +251,62 @@ export function registerForRunningAppsChange(
 }
 
 export function setupSuspendResumeHandler(): () => void {
-  const { unregister: unregisterOnSuspendRequest } =
-    SteamClient.User.RegisterForPrepareForSystemSuspendProgress(async () => {
-      systemWillSuspend = true;
-      if (!Settings.data.pauseBeforeSuspend) return;
-      await Promise.all(
-        (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
-          const appMD = await getAppMetaData(Number(a.appid));
-          appMD.is_paused = await is_paused(appMD.instanceid);
-          appMD.last_pause_state = appMD.is_paused;
-          if (!appMD.is_paused) {
-            appMD.is_paused = await pause(appMD.instanceid);
-          }
-          return a;
-        })
-      );
-    });
+  const onSuspend = async () => {
+    systemWillSuspend = true;
+    if (!Settings.data.pauseBeforeSuspend) return;
+    await Promise.all(
+      (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
+        const appMD = await getAppMetaData(Number(a.appid));
+        appMD.is_paused = await is_paused(appMD.instanceid);
+        appMD.last_pause_state = appMD.is_paused;
+        if (!appMD.is_paused) {
+          appMD.is_paused = await pause(appMD.instanceid);
+        }
+        return a;
+      }),
+    );
+  };
 
-  const { unregister: unregisterOnResumeFromSuspend } =
-    SteamClient.User.RegisterForResumeSuspendedGamesProgress(async () => {
-      systemWillSuspend = false;
-      if (!Settings.data.pauseBeforeSuspend) return;
-      await Promise.all(
-        (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
-          await resumeApp(Number(a.appid));
-          return a;
-        })
-      );
-    });
+  const onResume = async () => {
+    systemWillSuspend = false;
+    if (!Settings.data.pauseBeforeSuspend) return;
+    await Promise.all(
+      (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
+        await resumeApp(Number(a.appid));
+        return a;
+      }),
+    );
+  };
+
+  // const { unregister: unregisterOnSuspendRequest } =
+  //   SteamClient.System.RegisterForOnSuspendRequest(onSuspend);
+  // const { unregister: unregisterOnResumeFromSuspend } =
+  //   SteamClient.System.RegisterForOnResumeFromSuspend(onResume);
+
+  const suspendObservable = getSuspendObservable();
+  const resumeObservable = getResumeObservable();
+
+  const unregisterOnSuspendRequest = suspendObservable?.observe_((change) => {
+    const { newValue } = change;
+    console.log({ info: `mobX suspend triggered with ${newValue}` });
+    if (!newValue) {
+      return;
+    }
+    onSuspend();
+  });
+
+  const unregisterOnResumeFromSuspend = resumeObservable?.observe_((change) => {
+    const { newValue } = change;
+    console.log({ info: `mobX resume triggered with ${newValue}` });
+    if (!newValue) {
+      return;
+    }
+    onResume();
+  });
 
   return () => {
-    unregisterOnSuspendRequest();
-    unregisterOnResumeFromSuspend();
+    unregisterOnSuspendRequest && unregisterOnSuspendRequest();
+    unregisterOnResumeFromSuspend && unregisterOnResumeFromSuspend();
   };
 }
 
@@ -305,24 +337,34 @@ export function setupFocusChangeHandler(): () => void {
     SteamClient.System.UI.RegisterForFocusChangeEvents(
       throttle(async (fce: FocusChangeEvent) => {
         // don't try anything while an application is launching or it could pause it midlaunch
-        if (appIsStartingUp) { return; }
+        if (appIsStartingUp) {
+          return;
+        }
         // do nothing if system is suspending
-        if (systemWillSuspend) { return; }
+        if (systemWillSuspend) {
+          return;
+        }
         // skip if we already got such an event before
         if (
           fce.focusedApp.pid === lastPid &&
           fce.focusedApp.appid === lastAppid &&
           !(validKeyEvent?.eKey === 0)
-        ) { return; }
+        ) {
+          return;
+        }
         lastPid = fce.focusedApp.pid;
         if (
           fce.focusedApp.appid === 769 &&
           lastAppid === 769 &&
           !(validKeyEvent?.eKey === 0)
-        ) { return; }
+        ) {
+          return;
+        }
         lastAppid = fce.focusedApp.appid;
 
-        if (!Settings.data.autoPause) { return; }
+        if (!Settings.data.autoPause) {
+          return;
+        }
         // AppID 769 is the Steam Overlay or a non-steam app
         // Key event must be if the user pressed the 'STEAM' button. Don't pause for other buttons
         const overlayPause =
@@ -346,8 +388,7 @@ export function setupFocusChangeHandler(): () => void {
         }
         await Promise.all(
           (Router.RunningApps as AppOverviewExt[]).map(async (a) => {
-            if (Settings.data.noAutoPauseSet.has(Number(a.appid)))
-            {
+            if (Settings.data.noAutoPauseSet.has(Number(a.appid))) {
               return a;
             }
             const appMD = await getAppMetaData(Number(a.appid));
@@ -361,7 +402,7 @@ export function setupFocusChangeHandler(): () => void {
               if (appMD.is_paused) {
                 appMD.is_paused = !(await resume(appMD.instanceid));
                 appMD.pause_state_callbacks.forEach((cb) =>
-                  cb(appMD.is_paused)
+                  cb(appMD.is_paused),
                 );
               }
             } else {
@@ -369,14 +410,14 @@ export function setupFocusChangeHandler(): () => void {
               if (!appMD.is_paused) {
                 appMD.is_paused = await pause(appMD.instanceid);
                 appMD.pause_state_callbacks.forEach((cb) =>
-                  cb(appMD.is_paused)
+                  cb(appMD.is_paused),
                 );
               }
             }
             return a;
-          })
+          }),
         );
-      }, 500)
+      }, 500),
     );
 
   const { unregister: unregisterGameActionTaskChange } =
@@ -385,7 +426,7 @@ export function setupFocusChangeHandler(): () => void {
         // this event will trigger multiple times during the startup of an application
         // as long as the status is not 'Completed' the app should be considered to be in startup mode
         appIsStartingUp = status !== "Completed";
-      }
+      },
     );
 
   const { unregister: unregisterAppLifetimeNotifications } =
