@@ -72,7 +72,7 @@ function AppItem({app, autoPause}: {app: backend.AppOverviewExt, autoPause: bool
     if (app.icon_data && app.icon_data_format) {
       iconUrl = `data:image/${app.icon_data_format};base64,${app.icon_data}`;
     } else if (app.icon_hash) {
-      iconUrl = `/assets/${app.appid}_icon.jpg?v=${app.icon_hash}`;
+      iconUrl = `/assets/${app.appid}/${app.icon_hash}.jpg`;
     } else {
       return "none";
     }
