@@ -33,6 +33,23 @@ In addition to **Pause on focus loss**, **Also on overlay** will also pause apps
 - To manually pause or resume the game, press the game icon with the pause/play symbol in the **Pause Games list**.
 - To change which game should pause when **Pause on focus loss** is enabled, toggle the switch to the right of the **Pause Games list**.
 
+## Install
+
+You can find the Pause Games plugin in the official Decky store.
+
+If you want to install the latest version directly from github, download the latest version from the release page and install it via:
+
+```
+Decky Settings -> Developer -> Install Plugin from ZIP File
+(You may need to enable Developer Mode first under General settings)
+```
+
+Alternatively, you can run the following in terminal to install the latest version from Github:
+
+```
+curl -L https://github.com/wynn1212/SDH-PauseGames/raw/main/install.sh | sh
+```
+
 ## Known Issues
 
 - some games may not like being stopped and resumed too many times over extended periods of play while others work without issues. Make sure to save often if you intend to switch between games with the **Pause on focus loss** feature enabled.
