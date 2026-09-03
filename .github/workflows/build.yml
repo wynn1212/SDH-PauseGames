@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request_target:
+  pull_request:
     branches: ['*']
 
 jobs:
@@ -18,10 +18,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@main
       with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0
         submodules: "recursive"
-        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create variables
       run: |
