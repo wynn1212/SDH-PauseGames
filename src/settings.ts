@@ -10,6 +10,8 @@ type SettingStruct = {
     pauseBeforeSuspend: boolean;
     autoPause: boolean;
     overlayPause: boolean;
+    pauseOnBluetoothDisconnect: boolean;
+    resumeOnBluetoothConnect: boolean;
     noAutoPauseSet: Set<number>;
   };
 
@@ -18,6 +20,8 @@ type SettingStruct = {
       pauseBeforeSuspend: false,
       autoPause: false,
       overlayPause: false,
+      pauseOnBluetoothDisconnect: false,
+      resumeOnBluetoothConnect: true,
       noAutoPauseSet: new Set(),
     } as const;
 

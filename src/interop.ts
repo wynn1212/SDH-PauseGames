@@ -11,3 +11,5 @@ export const load_settings = callable<[], any>("load_settings");
 export const save_setting = callable<[key: string, value: any], void>("save_setting");
 export const add_no_auto_pause_set = callable<[appid: number], void>("add_no_auto_pause_set");
 export const remove_no_auto_pause_set = callable<[appid: number], void>("remove_no_auto_pause_set");
+export const get_bluetooth_gamepad_count = callable<[], number>("get_bluetooth_gamepad_count");
+export const get_connected_bluetooth_gamepads = callable<[], string[]>("get_connected_bluetooth_gamepads");

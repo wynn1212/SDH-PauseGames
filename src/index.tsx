@@ -12,7 +12,7 @@ import {
 } from "@decky/ui";
 import { definePlugin } from "@decky/api";
 import { useEffect, useState } from "react";
-import { FaStream, FaPlay, FaPause, FaMoon } from "react-icons/fa";
+import { FaStream, FaPlay, FaPause, FaMoon, FaGamepad } from "react-icons/fa";
 
 import * as backend from "./backend";
 import { pause, resume } from "./interop";
@@ -154,6 +154,12 @@ function Content() {
   const [pauseBeforeSuspend, setPauseBeforeSuspend] = useState<boolean>(Settings.data.pauseBeforeSuspend);
   const [autoPause, setAutoPause] = useState<boolean>(Settings.data.autoPause);
   const [overlayPause, setOverlayPause] = useState<boolean>(Settings.data.overlayPause);
+  const [pauseOnBluetoothDisconnect, setPauseOnBluetoothDisconnect] = useState<boolean>(
+    Settings.data.pauseOnBluetoothDisconnect
+  );
+  const [resumeOnBluetoothConnect, setResumeOnBluetoothConnect] = useState<boolean>(
+    Settings.data.resumeOnBluetoothConnect
+  );
 
   useEffect(() => {
     const unregisterRunningAppsChange = backend.registerForRunningAppsChange(
@@ -208,6 +214,36 @@ function Content() {
           />
         </PanelSectionRow>
       )}
+      <PanelSectionRow>
+        <ToggleField
+          bottomSeparator={pauseOnBluetoothDisconnect ? "none" : "standard"}
+          checked={pauseOnBluetoothDisconnect}
+          label="Pause on controller disconnect"
+          tooltip="Pauses running games when all connected Bluetooth gamepads are disconnected."
+          icon={<FaGamepad />}
+          onChange={async (state) => {
+            setPauseOnBluetoothDisconnect(state);
+            if (!state) {
+              backend.resetBluetoothTracking();
+            }
+            await Settings.save("pauseOnBluetoothDisconnect", state);
+          }}
+        />
+      </PanelSectionRow>
+      {pauseOnBluetoothDisconnect && (
+        <PanelSectionRow>
+          <ToggleField
+            checked={resumeOnBluetoothConnect}
+            label=" ↳ Resume on reconnect"
+            tooltip="Automatically resumes games that were paused when a controller reconnects."
+            onChange={async (state) => {
+              setResumeOnBluetoothConnect(state);
+              await Settings.save("resumeOnBluetoothConnect", state);
+            }}
+            disabled={!pauseOnBluetoothDisconnect}
+          />
+        </PanelSectionRow>
+      )}
       {runningApps.length ? (
         runningApps.map((app) => (
           <PanelSectionRow key={app.appid}>
@@ -240,6 +276,12 @@ function Content() {
           Additionally pauses apps while interacting with the Steam Overlay.
           <br />
           <strong>
+            <em>- Pause on controller disconnect</em>
+          </strong>
+          <br />
+          Pauses running games when all connected Bluetooth gamepads are disconnected.
+          <br />
+          <strong>
             <em>Applications will appear here.</em>
           </strong>
           <br />
@@ -259,6 +301,7 @@ export default definePlugin(() => {
 
   const unregisterFocusChangeHandler = backend.setupFocusChangeHandler();
   const unregisterSuspendResumeHandler = backend.setupSuspendResumeHandler();
+  const unregisterBluetoothDisconnectHandler = backend.setupBluetoothDisconnectHandler();
 
   return {
     name: "Pause Games",
@@ -268,6 +311,7 @@ export default definePlugin(() => {
       patch.unpatch();
       unregisterFocusChangeHandler();
       unregisterSuspendResumeHandler();
+      unregisterBluetoothDisconnectHandler();
     },
   };
 });

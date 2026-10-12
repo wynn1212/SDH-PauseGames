@@ -3,9 +3,11 @@ import {
   AppOverview,
   sleep,
 } from "@decky/ui";
+import { addEventListener, removeEventListener } from "@decky/api";
 import { debounce, throttle } from "lodash";
 import {
   appid_from_pid,
+  get_bluetooth_gamepad_count,
   is_paused,
   pause,
   pid_from_appid,
@@ -444,5 +446,181 @@ export function setupFocusChangeHandler(): () => void {
     unregisterFocusChangeEvents();
     unregisterGameActionTaskChange();
     unregisterAppLifetimeNotifications();
+  };
+}
+
+export async function pauseRunningGamesOnDisconnect(): Promise<void> {
+  const runningApps = Router.RunningApps as AppOverviewExt[];
+  if (!runningApps || !runningApps.length) {
+    return;
+  }
+  await Promise.all(
+    runningApps.map(async (a) => {
+      const appid = Number(a.appid);
+      if (Settings.data.noAutoPauseSet.has(appid)) {
+        return a;
+      }
+      const appMD = await getAppMetaData(appid);
+      if (appMD.sticky_state) {
+        return a;
+      }
+      appMD.is_paused = await is_paused(appMD.instanceid);
+      if (!appMD.is_paused) {
+        appMD.is_paused = await pause(appMD.instanceid);
+        appMD.pause_state_callbacks.forEach((cb) => cb(appMD.is_paused));
+      }
+      return a;
+    }),
+  );
+}
+
+export async function resumeGamesOnReconnect(): Promise<void> {
+  const runningApps = Router.RunningApps as AppOverviewExt[];
+  if (!runningApps || !runningApps.length) {
+    return;
+  }
+  // Brief delay to allow the Bluetooth controller input driver to bind cleanly
+  await sleep(300);
+  await Promise.all(
+    runningApps.map(async (a) => {
+      const appid = Number(a.appid);
+      const shouldResume = !Settings.data.noAutoPauseSet.has(appid);
+
+      if (shouldResume) {
+        if (Settings.data.noAutoPauseSet.has(appid)) {
+          return a;
+        }
+        const appMD = await getAppMetaData(appid);
+        if (appMD.sticky_state) {
+          return a;
+        }
+        appMD.is_paused = await is_paused(appMD.instanceid);
+        if (appMD.is_paused) {
+          const resumed = await resume(appMD.instanceid);
+          appMD.is_paused = !resumed;
+          appMD.pause_state_callbacks.forEach((cb) => cb(appMD.is_paused));
+        }
+      }
+      return a;
+    }),
+  );
+}
+
+let lastBluetoothGamepadCount: number = -1;
+let hadConnectedBluetoothGamepads: boolean = false;
+
+export async function checkBluetoothGamepadState(currentCount: number): Promise<void> {
+  if (!Settings.data.pauseOnBluetoothDisconnect) {
+    lastBluetoothGamepadCount = -1;
+    hadConnectedBluetoothGamepads = false;
+    return;
+  }
+
+  // Do nothing if system is suspending
+  if (systemWillSuspend) {
+    return;
+  }
+
+  // Initial check after enabling / startup
+  if (lastBluetoothGamepadCount === -1) {
+    lastBluetoothGamepadCount = currentCount;
+    hadConnectedBluetoothGamepads = currentCount > 0;
+    return;
+  }
+
+  // Case 1: All Bluetooth gamepads were disconnected
+  if (hadConnectedBluetoothGamepads && currentCount === 0) {
+    console.log("[PauseGames] All connected Bluetooth gamepads disconnected. Pausing running games...");
+    hadConnectedBluetoothGamepads = false;
+    lastBluetoothGamepadCount = 0;
+    await pauseRunningGamesOnDisconnect();
+    return;
+  }
+
+  // Case 2: A Bluetooth gamepad connected/activated after being at 0
+  if (lastBluetoothGamepadCount === 0 && currentCount > 0) {
+    console.log(`[PauseGames] Bluetooth gamepad connected (${currentCount}). Resuming paused games...`);
+    hadConnectedBluetoothGamepads = true;
+    lastBluetoothGamepadCount = currentCount;
+    if (Settings.data.resumeOnBluetoothConnect) {
+      await resumeGamesOnReconnect();
+    }
+    return;
+  }
+
+  if (currentCount > 0) {
+    hadConnectedBluetoothGamepads = true;
+  }
+  lastBluetoothGamepadCount = currentCount;
+}
+
+export function resetBluetoothTracking(): void {
+  lastBluetoothGamepadCount = -1;
+  hadConnectedBluetoothGamepads = false;
+}
+
+export function setupBluetoothDisconnectHandler(): () => void {
+  let isRunning = true;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+
+  const onUpdate = async (data: any) => {
+    if (!isRunning) return;
+    let count: number;
+    if (typeof data === "number") {
+      count = data;
+    } else if (data && typeof data.count === "number") {
+      count = data.count;
+    } else if (Array.isArray(data)) {
+      count = data.length;
+    } else {
+      try {
+        count = await get_bluetooth_gamepad_count();
+      } catch {
+        return;
+      }
+    }
+    await checkBluetoothGamepadState(count);
+  };
+
+  const listener = async (data: any) => {
+    await onUpdate(data);
+  };
+
+  let unregisterEvent: any = null;
+  try {
+    unregisterEvent = addEventListener("bluetooth_gamepads_changed", listener);
+  } catch (e) {
+    console.warn("[PauseGames] Failed to register bluetooth_gamepads_changed event listener", e);
+  }
+
+  const poll = async () => {
+    if (!isRunning) return;
+    if (Settings.data.pauseOnBluetoothDisconnect) {
+      try {
+        const count = await get_bluetooth_gamepad_count();
+        await onUpdate(count);
+      } catch (e) {}
+    }
+  };
+
+  intervalId = setInterval(poll, 1500);
+
+  // Initial check
+  poll();
+
+  return () => {
+    isRunning = false;
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    if (typeof unregisterEvent === "function") {
+      try {
+        unregisterEvent();
+      } catch (e) {}
+    }
+    try {
+      removeEventListener("bluetooth_gamepads_changed", listener);
+    } catch (e) {}
   };
 }

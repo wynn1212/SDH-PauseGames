@@ -26,6 +26,8 @@ it is manually changed back.
 
 In addition to **Pause on focus loss**, **Also on overlay** will also pause apps when the Steam Overlay is on (by pressing the **STEAM** button).
 
+The **Pause on controller disconnect** feature checks connected Bluetooth gamepads and triggers game pause when all of them become disconnected. When a Bluetooth gamepad reconnects, it automatically resumes the game (can be toggled via **Resume on reconnect**). If only standard Steam Deck built-in controls are used (no Bluetooth gamepads connected), it remains idle and does nothing.
+
 ## Usage
 
 ![](assets/pausegames_usage.jpg)
