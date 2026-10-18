@@ -33,6 +33,7 @@ def get_all_children(pid: int) -> list[str]:
 class Plugin:
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
+        decky_plugin.logger.info(f"Starting SDH-PauseGames...")
         self.settings = SettingsManager(name="settings", settings_directory=decky_plugin.DECKY_PLUGIN_SETTINGS_DIR)
         self.settings.read()
 
@@ -61,6 +62,7 @@ class Plugin:
 
     async def pause(self, pid: int) -> bool:
         pids = get_all_children(pid)
+        decky_plugin.logger.info(f"Pauseing {pids}")
         if pids:
             command = ["kill", "-SIGSTOP"]
             command.extend(pids)
@@ -76,6 +78,7 @@ class Plugin:
 
     async def resume(self, pid: int) -> bool:
         pids = get_all_children(pid)
+        decky_plugin.logger.info(f"Resuming {pids}")
         if pids:
             command = ["kill", "-SIGCONT"]
             command.extend(pids)
@@ -121,12 +124,13 @@ class Plugin:
         try:
             clean_env = os.environ.copy()
             clean_env["LD_LIBRARY_PATH"] = ""
-            with subprocess.Popen(["pgrep", "--full", "--oldest", f"/reaper\\s.*\\bAppId={appid}\\b"], stdout=subprocess.PIPE, env=clean_env) as p:
+            with subprocess.Popen(["pgrep", "--full", "--newest", f"/reaper\\s.*\\bAppId={appid}\\b"], stdout=subprocess.PIPE, env=clean_env) as p:
                 pid = p.stdout.read().strip()
         except:
             return 0
         if not pid:
             return 0
+        decky_plugin.logger.info(f"Appid: {appid} PID: {pid}")
         return int(pid)
 
     async def appid_from_pid(self, pid: int) -> int:
